@@ -9,10 +9,27 @@ export default function Home() {
   const [shortUrl, setShortUrl] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
+  const [copied, setCopied] = useState(false);
+  const [toast, setToast] = useState("");
   const [loggedIn, setLoggedIn] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [cursor, setCursor] = useState({ x: -500, y: -500 });
+
+  useEffect(() => {
+    function handleMouseMove(event: MouseEvent) {
+      setCursor({
+        x: event.clientX,
+        y: event.clientY,
+      });
+    }
+
+    window.addEventListener("mousemove", handleMouseMove);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, []);
 
   useEffect(() => {
     async function checkAuth() {
@@ -31,11 +48,22 @@ export default function Home() {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    if (!toast) return;
+
+    const timer = setTimeout(() => {
+      setToast("");
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [toast]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setError("");
     setShortUrl("");
+    setCopied(false);
     setLoading(true);
 
     try {
@@ -54,17 +82,57 @@ export default function Home() {
 
       if (!response.ok) {
         setError(data.error || "Something went wrong.");
+        setToast(data.error || "Unable to create short link.");
         return;
       }
 
       setShortUrl(`${window.location.origin}/${data.shortCode}`);
-
       setUrl("");
       setAlias("");
+      setToast("Short link created successfully.");
     } catch {
       setError("Something went wrong. Please try again.");
+      setToast("Unable to create short link.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleCopy() {
+    if (!shortUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(shortUrl);
+      setCopied(true);
+      setToast("Link copied to clipboard.");
+
+      setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+    } catch {
+      setToast("Unable to copy link.");
+    }
+  }
+
+  async function handleShare() {
+    if (!shortUrl) return;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Shortened URL",
+          url: shortUrl,
+        });
+
+        setToast("Link shared successfully.");
+      } catch (error) {
+        if (error instanceof Error && error.name !== "AbortError") {
+          setToast("Unable to share link.");
+        }
+      }
+    } else {
+      await handleCopy();
+      setToast("Link copied. You can now share it anywhere.");
     }
   }
 
@@ -78,28 +146,74 @@ export default function Home() {
 
       if (response.ok) {
         setLoggedIn(false);
+        setToast("Signed out successfully.");
       } else {
-        setError("Unable to log out. Please try again.");
+        setToast("Unable to sign out.");
       }
     } catch {
-      setError("Unable to log out. Please try again.");
+      setToast("Unable to sign out.");
     } finally {
       setLoggingOut(false);
     }
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
-      <div className="mx-auto flex min-h-[80vh] max-w-5xl flex-col items-center justify-center">
-        <div className="mb-10 text-center">
+    <main className="relative min-h-screen overflow-hidden bg-slate-950 px-6 py-12 text-white">
+      <div
+        className="pointer-events-none fixed z-0 h-[420px] w-[420px] rounded-full bg-blue-500/10 blur-[100px] transition-transform duration-150 ease-out"
+        style={{
+          transform: `translate3d(${cursor.x - 210}px, ${cursor.y - 210}px, 0)`,
+        }}
+      />
+
+      <div
+        className="pointer-events-none fixed z-0 h-24 w-24 rounded-full bg-blue-400/10 blur-3xl transition-transform duration-75 ease-out"
+        style={{
+          transform: `translate3d(${cursor.x - 48}px, ${cursor.y - 48}px, 0)`,
+        }}
+      />
+
+      {toast && (
+        <div className="fixed right-6 top-6 z-50 rounded-xl border border-slate-700 bg-slate-900/95 px-5 py-3 text-sm font-medium text-white shadow-2xl backdrop-blur">
+          <span className="mr-2 text-blue-400">✓</span>
+          {toast}
+        </div>
+      )}
+
+      <div className="relative z-10 mx-auto flex min-h-[80vh] max-w-5xl flex-col items-center justify-center">
+        <nav className="mb-10 flex flex-wrap items-center justify-center gap-8">
           <Link
             href="/"
-            className="text-sm font-medium uppercase tracking-[0.3em] text-blue-400 transition hover:text-blue-300"
+            className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-400 transition hover:text-blue-300"
           >
             Shortly
           </Link>
 
-          <h1 className="mt-4 text-5xl font-bold tracking-tight sm:text-6xl">
+          {loggedIn && (
+            <>
+              <Link
+                href="/dashboard"
+                className="text-sm font-medium text-slate-400 transition hover:text-white"
+              >
+                Dashboard
+              </Link>
+
+              <Link
+                href="/analytics"
+                className="text-sm font-medium text-slate-400 transition hover:text-white"
+              >
+                Analytics
+              </Link>
+            </>
+          )}
+        </nav>
+
+        <div className="mb-10 text-center">
+          <p className="mb-4 text-sm font-medium uppercase tracking-[0.25em] text-blue-400">
+            Simple URL management
+          </p>
+
+          <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
             Shorten your URLs.
           </h1>
 
@@ -142,17 +256,37 @@ export default function Home() {
           </form>
 
           {shortUrl && (
-            <div className="mt-6 rounded-lg border border-slate-700 bg-slate-950 p-4">
+            <div className="mt-6 rounded-xl border border-slate-700 bg-slate-950 p-4">
               <p className="text-sm text-slate-400">Your shortened URL</p>
 
-              <a
-                href={shortUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 block break-all font-medium text-blue-400 hover:text-blue-300"
-              >
-                {shortUrl}
-              </a>
+              <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <a
+                  href={shortUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="min-w-0 flex-1 break-all font-medium text-blue-400 transition hover:text-blue-300"
+                >
+                  {shortUrl}
+                </a>
+
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-blue-500 hover:text-white"
+                  >
+                    {copied ? "Copied" : "Copy"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleShare}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500"
+                  >
+                    Share
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </section>
@@ -165,7 +299,14 @@ export default function Home() {
                   href="/dashboard"
                   className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500"
                 >
-                  Dashboard
+                  Open dashboard
+                </Link>
+
+                <Link
+                  href="/dashboard/create"
+                  className="rounded-lg border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-300 transition hover:border-blue-500 hover:text-white"
+                >
+                  Create link
                 </Link>
 
                 <button

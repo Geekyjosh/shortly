@@ -1,874 +1,802 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { QRCodeCanvas } from "qrcode.react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { Check, Copy, Mail, Share2, X } from "lucide-react";
 
-type Url = {
+type UrlItem = {
   id: number;
-  originalUrl: string;
   shortCode: string;
+  originalUrl: string;
   clicks: number;
   createdAt: string;
   expiresAt: string | null;
+  active: boolean;
 };
 
-type Click = {
-  id: number;
-  shortCode: string;
-  createdAt: string;
-  referrer: string | null;
-  userAgent: string | null;
+type ShareModalProps = {
+  url: string;
+  onCopy: () => void;
+  onClose: () => void;
 };
 
-type Analytics = {
-  totalClicks: number;
-  totalLinks: number;
-  urls: Url[];
-  clicks: Click[];
-};
+function WhatsAppIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="h-6 w-6"
+      aria-hidden="true"
+    >
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.521-.075-.149-.669-1.611-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.372-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.004 2a9.95 9.95 0 0 0-8.47 15.1L2 22l4.9-1.526A10 10 0 1 0 12.004 2m0 18.3a8.3 8.3 0 0 1-4.23-1.157l-.303-.18-2.91.906.922-2.834-.198-.308A8.3 8.3 0 1 1 12.004 20.3" />
+    </svg>
+  );
+}
 
-export default function Dashboard() {
-  const router = useRouter();
+function XBrandIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="h-6 w-6"
+      aria-hidden="true"
+    >
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817-5.966 6.817H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
 
-  const [urls, setUrls] = useState<Url[]>([]);
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loggingOut, setLoggingOut] = useState(false);
+function FacebookIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="h-6 w-6"
+      aria-hidden="true"
+    >
+      <path d="M13.5 21v-8h2.7l.4-3h-3.1V8.1c0-.9.3-1.5 1.6-1.5h1.7V4a22 22 0 0 0-2.4-.1c-2.4 0-4 1.5-4 4.1V10H7.7v3H10v8h3.5Z" />
+    </svg>
+  );
+}
 
-  const [url, setUrl] = useState("");
-  const [alias, setAlias] = useState("");
-  const [expiresAt, setExpiresAt] = useState("");
-  const [shortUrl, setShortUrl] = useState("");
-  const [error, setError] = useState("");
-  const [creating, setCreating] = useState(false);
+function LinkedinIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="h-6 w-6"
+      aria-hidden="true"
+    >
+      <path d="M6.5 8.2A2 2 0 1 0 6.5 4.2a2 2 0 0 0 0 4ZM4.7 9.8h3.6V20H4.7V9.8Zm5.8 0h3.4v1.4h.1c.5-.9 1.6-1.8 3.4-1.8 3.6 0 4.3 2.4 4.3 5.5V20h-3.6v-4.5c0-1.1 0-2.6-1.6-2.6s-1.9 1.2-1.9 2.5V20h-3.6V9.8Z" />
+    </svg>
+  );
+}
 
-  const [qrUrl, setQrUrl] = useState("");
-  const [qrShortCode, setQrShortCode] = useState("");
-
-  const [analyticsShortCode, setAnalyticsShortCode] = useState("");
+function ShareModal({ url, onCopy, onClose }: ShareModalProps) {
+  const encodedUrl = encodeURIComponent(url);
+  const shareText = encodeURIComponent("Check out this link");
 
   useEffect(() => {
-    async function fetchDashboardData() {
-      try {
-        const [urlsResponse, analyticsResponse] = await Promise.all([
-          fetch("/api/urls"),
-          fetch("/api/analytics"),
-        ]);
-
-        if (urlsResponse.status === 401 || analyticsResponse.status === 401) {
-          router.push("/login");
-          return;
-        }
-
-        const urlsData = await urlsResponse.json();
-        const analyticsData = await analyticsResponse.json();
-
-        if (urlsResponse.ok) {
-          setUrls(urlsData);
-        }
-
-        if (analyticsResponse.ok) {
-          setAnalytics(analyticsData);
-        }
-      } catch (error) {
-        console.error("Dashboard fetch error:", error);
-      } finally {
-        setLoading(false);
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
       }
     }
 
-    fetchDashboardData();
-  }, [router]);
+    document.addEventListener("keydown", handleEscape);
 
-  const totalLinks = urls.length;
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [onClose]);
 
-  const totalClicks = urls.reduce((total, url) => total + url.clicks, 0);
+  function openShare(target: string) {
+    window.open(target, "_blank", "noopener,noreferrer,width=700,height=600");
 
-  const today = new Date();
+    onClose();
+  }
 
-  const todaysClicks =
-    analytics?.clicks.filter((click) => {
-      const clickDate = new Date(click.createdAt);
+  async function nativeShare() {
+    if (!navigator.share) return;
 
-      return (
-        clickDate.getFullYear() === today.getFullYear() &&
-        clickDate.getMonth() === today.getMonth() &&
-        clickDate.getDate() === today.getDate()
-      );
-    }).length ?? 0;
+    try {
+      await navigator.share({
+        title: "Shortly link",
+        url,
+      });
 
-  const clicksOverTime = useMemo(() => {
-    if (!analytics?.clicks.length) {
-      return [];
+      onClose();
+    } catch (error) {
+      if (error instanceof Error && error.name !== "AbortError") {
+        onClose();
+      }
     }
+  }
 
-    const grouped = analytics.clicks.reduce<Record<string, number>>(
-      (accumulator, click) => {
-        const date = new Date(click.createdAt);
-        const key = date.toISOString().slice(0, 10);
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-sm"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="share-dialog-title"
+      >
+        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400">
+              <Share2 className="h-5 w-5" />
+            </div>
 
-        accumulator[key] = (accumulator[key] || 0) + 1;
+            <div>
+              <h2 id="share-dialog-title" className="font-semibold text-white">
+                Share link
+              </h2>
 
-        return accumulator;
-      },
-      {},
-    );
+              <p className="mt-0.5 text-xs text-slate-500">
+                Share your shortened URL
+              </p>
+            </div>
+          </div>
 
-    return Object.entries(grouped)
-      .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
-      .map(([date, clicks]) => ({
-        date,
-        clicks,
-      }));
-  }, [analytics]);
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-800 hover:text-white"
+            aria-label="Close share dialog"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-  async function handleCreateUrl(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+        <div className="px-6 py-6">
+          <div className="mb-6 rounded-xl border border-slate-800 bg-slate-950 px-4 py-3">
+            <p className="truncate text-sm text-blue-400">{url}</p>
+          </div>
 
+          <div className="grid grid-cols-4 gap-3">
+            <button
+              type="button"
+              onClick={() =>
+                openShare(`https://wa.me/?text=${shareText}%20${encodedUrl}`)
+              }
+              className="group flex flex-col items-center gap-2"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-500/10 text-green-400 transition group-hover:bg-green-500/20 group-hover:scale-105">
+                <WhatsAppIcon />
+              </span>
+
+              <span className="text-xs text-slate-400 transition group-hover:text-white">
+                WhatsApp
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                openShare(
+                  `https://twitter.com/intent/tweet?text=${shareText}&url=${encodedUrl}`,
+                )
+              }
+              className="group flex flex-col items-center gap-2"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 text-white transition group-hover:bg-white/10 group-hover:scale-105">
+                <XBrandIcon />
+              </span>
+
+              <span className="text-xs text-slate-400 transition group-hover:text-white">
+                X
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                openShare(
+                  `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+                )
+              }
+              className="group flex flex-col items-center gap-2"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 transition group-hover:bg-blue-500/20 group-hover:scale-105">
+                <FacebookIcon />
+              </span>
+
+              <span className="text-xs text-slate-400 transition group-hover:text-white">
+                Facebook
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                openShare(
+                  `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
+                )
+              }
+              className="group flex flex-col items-center gap-2"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 transition group-hover:bg-blue-500/20 group-hover:scale-105">
+                <LinkedinIcon />
+              </span>
+
+              <span className="text-xs text-slate-400 transition group-hover:text-white">
+                LinkedIn
+              </span>
+            </button>
+          </div>
+
+          <div className="mt-7 space-y-3">
+            <button
+              type="button"
+              onClick={() =>
+                openShare(`mailto:?subject=${shareText}&body=${encodedUrl}`)
+              }
+              className="flex w-full items-center gap-3 rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-left transition hover:border-slate-700 hover:bg-slate-800"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-500/10 text-purple-400">
+                <Mail className="h-5 w-5" />
+              </span>
+
+              <span>
+                <span className="block text-sm font-medium text-slate-300">
+                  Share via email
+                </span>
+                <span className="mt-0.5 block text-xs text-slate-500">
+                  Open your default email app
+                </span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onCopy}
+              className="flex w-full items-center gap-3 rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-left transition hover:border-slate-700 hover:bg-slate-800"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
+                <Copy className="h-5 w-5" />
+              </span>
+
+              <span>
+                <span className="block text-sm font-medium text-slate-300">
+                  Copy link
+                </span>
+                <span className="mt-0.5 block text-xs text-slate-500">
+                  Copy the shortened URL to your clipboard
+                </span>
+              </span>
+            </button>
+
+            {typeof navigator !== "undefined" &&
+              typeof navigator.share === "function" && (
+                <button
+                  type="button"
+                  onClick={nativeShare}
+                  className="flex w-full items-center gap-3 rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-left transition hover:border-slate-700 hover:bg-slate-800"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+                    <Share2 className="h-5 w-5" />
+                  </span>
+
+                  <span>
+                    <span className="block text-sm font-medium text-slate-300">
+                      More sharing options
+                    </span>
+                    <span className="mt-0.5 block text-xs text-slate-500">
+                      Use your device&apos;s native share menu
+                    </span>
+                  </span>
+                </button>
+              )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function Dashboard() {
+  const [urls, setUrls] = useState<UrlItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("newest");
+  const [toast, setToast] = useState("");
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [actionId, setActionId] = useState<number | null>(null);
+  const [shareId, setShareId] = useState<number | null>(null);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+
+    const timer = setTimeout(() => {
+      setToast("");
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  async function checkAuth() {
+    try {
+      const response = await fetch("/api/auth/me");
+      const data = await response.json();
+
+      if (!data.authenticated) {
+        window.location.href = "/login";
+        return;
+      }
+
+      setLoggedIn(true);
+      await loadUrls();
+    } catch {
+      window.location.href = "/login";
+    }
+  }
+
+  async function loadUrls() {
+    setLoading(true);
     setError("");
-    setShortUrl("");
-    setCreating(true);
+
+    try {
+      const response = await fetch("/api/urls");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to load your links.");
+      }
+
+      setUrls(data.urls || []);
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Unable to load your links.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function toggleStatus(id: number) {
+    setActionId(id);
 
     try {
       const response = await fetch("/api/urls", {
-        method: "POST",
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          url,
-          alias: alias || undefined,
-          expiresAt: expiresAt || undefined,
-        }),
+        body: JSON.stringify({ id }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error);
-        return;
+        throw new Error(data.error || "Unable to update link.");
       }
 
-      const newUrl: Url = {
-        id: data.id,
-        originalUrl: data.originalUrl,
-        shortCode: data.shortCode,
-        clicks: 0,
-        createdAt: new Date().toISOString(),
-        expiresAt: data.expiresAt,
-      };
+      setUrls((currentUrls) =>
+        currentUrls.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                active: data.url.active,
+              }
+            : item,
+        ),
+      );
 
-      setUrls((currentUrls) => [newUrl, ...currentUrls]);
-
-      setAnalytics((current) => {
-        if (!current) {
-          return current;
-        }
-
-        return {
-          ...current,
-          totalLinks: current.totalLinks + 1,
-          urls: [newUrl, ...current.urls],
-        };
-      });
-
-      setShortUrl(`${window.location.origin}/${data.shortCode}`);
-
-      setUrl("");
-      setAlias("");
-      setExpiresAt("");
-    } catch {
-      setError("Something went wrong. Please try again.");
+      setToast(
+        data.url.active
+          ? "Link activated successfully."
+          : "Link disabled successfully.",
+      );
+    } catch (error) {
+      setToast(
+        error instanceof Error ? error.message : "Unable to update link.",
+      );
     } finally {
-      setCreating(false);
+      setActionId(null);
     }
   }
 
-  async function handleDelete(id: number) {
+  async function deleteLink(id: number) {
     const confirmed = window.confirm(
-      "Are you sure you want to delete this shortened URL?",
+      "Are you sure you want to delete this link? This action cannot be undone.",
     );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
-    const response = await fetch("/api/urls", {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ id }),
-    });
-
-    if (response.ok) {
-      setUrls((currentUrls) => currentUrls.filter((url) => url.id !== id));
-
-      setAnalytics((current) => {
-        if (!current) {
-          return current;
-        }
-
-        const deletedUrl = current.urls.find((url) => url.id === id);
-
-        return {
-          ...current,
-          totalLinks: current.totalLinks - 1,
-          totalClicks: current.totalClicks - (deletedUrl?.clicks ?? 0),
-          urls: current.urls.filter((url) => url.id !== id),
-          clicks: current.clicks.filter(
-            (click) => click.shortCode !== deletedUrl?.shortCode,
-          ),
-        };
-      });
-    }
-  }
-
-  async function handleLogout() {
-    setLoggingOut(true);
+    setActionId(id);
 
     try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
+      const response = await fetch("/api/urls", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id }),
       });
 
-      router.push("/login");
-      router.refresh();
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to delete link.");
+      }
+
+      setUrls((currentUrls) => currentUrls.filter((item) => item.id !== id));
+
+      if (shareId === id) {
+        setShareId(null);
+      }
+
+      setToast("Link deleted successfully.");
+    } catch (error) {
+      setToast(
+        error instanceof Error ? error.message : "Unable to delete link.",
+      );
     } finally {
-      setLoggingOut(false);
+      setActionId(null);
     }
   }
 
-  function formatExpiration(expiresAt: string | null) {
-    if (!expiresAt) {
-      return "Never";
+  async function copyLink(shortCode: string) {
+    const link = `${window.location.origin}/${shortCode}`;
+
+    try {
+      await navigator.clipboard.writeText(link);
+      setShareId(null);
+      setToast("Link copied to clipboard.");
+    } catch {
+      setToast("Unable to copy link.");
     }
-
-    const expirationDate = new Date(expiresAt);
-
-    if (expirationDate < new Date()) {
-      return "Expired";
-    }
-
-    return expirationDate.toLocaleString();
   }
 
-  function openQrCode(shortCode: string) {
-    const fullUrl = `${window.location.origin}/${shortCode}`;
+  const filteredUrls = useMemo(() => {
+    const query = search.toLowerCase().trim();
 
-    setQrUrl(fullUrl);
-    setQrShortCode(shortCode);
-  }
+    const filtered = urls.filter((item) => {
+      return (
+        item.originalUrl.toLowerCase().includes(query) ||
+        item.shortCode.toLowerCase().includes(query)
+      );
+    });
 
-  function closeQrCode() {
-    setQrUrl("");
-    setQrShortCode("");
-  }
+    return [...filtered].sort((a, b) => {
+      if (sort === "oldest") {
+        return (
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+      }
 
-  function downloadQrCode() {
-    const canvas = document.getElementById(
-      "shortly-qr-code",
-    ) as HTMLCanvasElement | null;
+      if (sort === "clicks") {
+        return b.clicks - a.clicks;
+      }
 
-    if (!canvas) {
-      return;
-    }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [urls, search, sort]);
 
-    const link = document.createElement("a");
+  const totalClicks = urls.reduce((total, item) => total + item.clicks, 0);
 
-    link.download = `shortly-${qrShortCode}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  }
+  const activeLinks = urls.filter((item) => item.active).length;
 
-  function openAnalytics(shortCode: string) {
-    setAnalyticsShortCode(shortCode);
-  }
+  const shareItem = urls.find((item) => item.id === shareId);
 
-  function closeAnalytics() {
-    setAnalyticsShortCode("");
-  }
+  if (!loggedIn && loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-blue-500" />
 
-  function getBrowser(userAgent: string | null) {
-    if (!userAgent) {
-      return "Unknown";
-    }
-
-    if (userAgent.includes("Edg")) {
-      return "Edge";
-    }
-
-    if (userAgent.includes("Chrome")) {
-      return "Chrome";
-    }
-
-    if (userAgent.includes("Firefox")) {
-      return "Firefox";
-    }
-
-    if (userAgent.includes("Safari")) {
-      return "Safari";
-    }
-
-    return "Other";
+          <p className="mt-4 text-sm text-slate-500">Loading dashboard...</p>
+        </div>
+      </main>
+    );
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-10 flex items-start justify-between gap-6">
+    <main className="min-h-screen bg-slate-950 text-white">
+      {toast && (
+        <div className="fixed right-6 top-6 z-[200] rounded-xl border border-slate-700 bg-slate-900/95 px-5 py-3 text-sm font-medium text-white shadow-2xl backdrop-blur">
+          <span className="mr-2 text-blue-400">
+            <Check className="inline h-4 w-4" />
+          </span>
+
+          {toast}
+        </div>
+      )}
+
+      {shareItem && (
+        <ShareModal
+          url={`${window.location.origin}/${shareItem.shortCode}`}
+          onCopy={() => copyLink(shareItem.shortCode)}
+          onClose={() => setShareId(null)}
+        />
+      )}
+
+      <header className="border-b border-slate-800 bg-slate-950/90">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+          <Link
+            href="/dashboard"
+            className="text-lg font-bold tracking-tight text-blue-400"
+          >
+            Shortly
+          </Link>
+
+          <nav className="flex items-center gap-6">
+            <Link
+              href="/"
+              className="text-sm text-slate-400 transition hover:text-white"
+            >
+              Home
+            </Link>
+
+            <Link href="/dashboard" className="text-sm font-medium text-white">
+              Dashboard
+            </Link>
+
+            <Link
+              href="/analytics"
+              className="text-sm text-slate-400 transition hover:text-white"
+            >
+              Analytics
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-7xl px-6 py-10">
+        <div className="mb-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-sm font-medium uppercase tracking-widest text-blue-400">
-              Shortly
+            <p className="mb-2 text-sm font-medium uppercase tracking-[0.2em] text-blue-400">
+              Link management
             </p>
 
-            <h1 className="mt-2 text-3xl font-bold">URL Dashboard</h1>
+            <h1 className="text-4xl font-bold tracking-tight">Your links</h1>
 
-            <p className="mt-2 text-slate-400">
-              Manage your shortened links and track their performance.
+            <p className="mt-3 max-w-2xl text-slate-400">
+              Create, manage and share all your shortened URLs from one place.
             </p>
           </div>
 
-          <button
-            onClick={handleLogout}
-            disabled={loggingOut}
-            className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-red-500 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+          <Link
+            href="/dashboard/create"
+            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium transition hover:bg-blue-500"
           >
-            {loggingOut ? "Logging out..." : "Logout"}
-          </button>
+            Create short link
+          </Link>
         </div>
 
-        <section className="mb-10 rounded-xl border border-slate-800 bg-slate-900 p-6">
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold">Create a short URL</h2>
+        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+            <p className="text-sm text-slate-400">Total links</p>
 
-            <p className="mt-1 text-sm text-slate-400">
-              Create and manage a new shortened link from your dashboard.
-            </p>
+            <p className="mt-3 text-3xl font-bold">{urls.length}</p>
           </div>
 
-          <form onSubmit={handleCreateUrl} className="space-y-3">
-            <input
-              type="url"
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
-              placeholder="Paste your long URL here..."
-              className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 outline-none placeholder:text-slate-500 focus:border-blue-500"
-              required
-            />
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+            <p className="text-sm text-slate-400">Total clicks</p>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <input
-                type="text"
-                value={alias}
-                onChange={(event) => setAlias(event.target.value)}
-                placeholder="Custom alias (optional)"
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 outline-none placeholder:text-slate-500 focus:border-blue-500"
-              />
+            <p className="mt-3 text-3xl font-bold">{totalClicks}</p>
+          </div>
 
-              <input
-                type="datetime-local"
-                value={expiresAt}
-                onChange={(event) => setExpiresAt(event.target.value)}
-                min={new Date().toISOString().slice(0, 16)}
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-blue-500"
-              />
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+            <p className="text-sm text-slate-400">Active links</p>
+
+            <p className="mt-3 text-3xl font-bold">{activeLinks}</p>
+          </div>
+        </div>
+
+        <section className="overflow-visible rounded-2xl border border-slate-800 bg-slate-900">
+          <div className="flex flex-col gap-4 border-b border-slate-800 p-5 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="font-semibold">Short links</h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Manage and share your links.
+              </p>
             </div>
 
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search links..."
+                className="rounded-lg border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm outline-none placeholder:text-slate-500 focus:border-blue-500"
+              />
 
-            <button
-              type="submit"
-              disabled={creating}
-              className="rounded-lg bg-blue-600 px-6 py-3 font-medium transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {creating ? "Creating..." : "Shorten URL"}
-            </button>
-          </form>
-
-          {shortUrl && (
-            <div className="mt-5 rounded-lg border border-slate-700 bg-slate-950 p-4">
-              <p className="text-sm text-slate-400">Your shortened URL</p>
-
-              <a
-                href={shortUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-1 block break-all font-medium text-blue-400 hover:text-blue-300"
+              <select
+                value={sort}
+                onChange={(event) => setSort(event.target.value)}
+                className="rounded-lg border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-300 outline-none focus:border-blue-500"
               >
-                {shortUrl}
-              </a>
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="clicks">Most clicks</option>
+              </select>
+            </div>
+          </div>
+
+          {loading && (
+            <div className="p-12 text-center">
+              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-blue-500" />
+
+              <p className="mt-4 text-sm text-slate-500">
+                Loading your links...
+              </p>
+            </div>
+          )}
+
+          {!loading && error && (
+            <div className="p-12 text-center">
+              <p className="text-red-400">{error}</p>
+
+              <button
+                type="button"
+                onClick={loadUrls}
+                className="mt-4 rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-blue-500 hover:text-white"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
+          {!loading && !error && filteredUrls.length === 0 && (
+            <div className="p-12 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-800 bg-slate-950 text-2xl">
+                🔗
+              </div>
+
+              <h3 className="mt-5 font-semibold">
+                {search ? "No links found" : "No short links yet"}
+              </h3>
+
+              <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
+                {search
+                  ? "Try a different search term."
+                  : "Create your first shortened URL and it will appear here."}
+              </p>
+
+              {!search && (
+                <Link
+                  href="/dashboard/create"
+                  className="mt-5 inline-flex rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium transition hover:bg-blue-500"
+                >
+                  Create your first link
+                </Link>
+              )}
+            </div>
+          )}
+
+          {!loading && !error && filteredUrls.length > 0 && (
+            <div className="divide-y divide-slate-800">
+              {filteredUrls.map((item) => {
+                const shortUrl = `${window.location.origin}/${item.shortCode}`;
+                const busy = actionId === item.id;
+
+                return (
+                  <div
+                    key={item.id}
+                    className="p-5 transition hover:bg-slate-950/50"
+                  >
+                    <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <a
+                            href={shortUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`font-semibold transition ${
+                              item.active
+                                ? "text-blue-400 hover:text-blue-300"
+                                : "text-slate-500 line-through"
+                            }`}
+                          >
+                            {window.location.host}/{item.shortCode}
+                          </a>
+
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                              item.active
+                                ? "bg-emerald-500/10 text-emerald-400"
+                                : "bg-red-500/10 text-red-400"
+                            }`}
+                          >
+                            {item.active ? "Active" : "Inactive"}
+                          </span>
+                        </div>
+
+                        <p className="mt-2 max-w-3xl truncate text-sm text-slate-500">
+                          {item.originalUrl}
+                        </p>
+
+                        <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-500">
+                          <span>{item.clicks} clicks</span>
+
+                          <span>
+                            Created{" "}
+                            {new Date(item.createdAt).toLocaleDateString()}
+                          </span>
+
+                          {item.expiresAt && (
+                            <span>
+                              Expires{" "}
+                              {new Date(item.expiresAt).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => copyLink(item.shortCode)}
+                          disabled={busy}
+                          className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-blue-500 hover:text-white disabled:opacity-50"
+                        >
+                          Copy
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setShareId(item.id)}
+                          disabled={busy}
+                          className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-blue-500 hover:text-white disabled:opacity-50"
+                        >
+                          Share
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => toggleStatus(item.id)}
+                          disabled={busy}
+                          className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-amber-500 hover:text-white disabled:opacity-50"
+                        >
+                          {busy
+                            ? "Working..."
+                            : item.active
+                              ? "Disable"
+                              : "Activate"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => deleteLink(item.id)}
+                          disabled={busy}
+                          className="rounded-lg border border-red-500/30 px-4 py-2 text-sm font-medium text-red-400 transition hover:border-red-500 hover:bg-red-500/10 disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+
+                        <a
+                          href={shortUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                            item.active
+                              ? "bg-blue-600 text-white hover:bg-blue-500"
+                              : "bg-slate-800 text-slate-500"
+                          }`}
+                        >
+                          Open
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>
-
-        {loading ? (
-          <p className="text-slate-400">Loading dashboard...</p>
-        ) : (
-          <>
-            <section className="mb-10">
-              <div className="mb-5">
-                <h2 className="text-xl font-semibold">Analytics</h2>
-
-                <p className="mt-1 text-sm text-slate-400">
-                  Track how your shortened links are performing.
-                </p>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="rounded-lg border border-slate-800 bg-slate-900 p-6">
-                  <p className="text-sm text-slate-400">Total Links</p>
-
-                  <p className="mt-2 text-3xl font-bold">{totalLinks}</p>
-                </div>
-
-                <div className="rounded-lg border border-slate-800 bg-slate-900 p-6">
-                  <p className="text-sm text-slate-400">Total Clicks</p>
-
-                  <p className="mt-2 text-3xl font-bold">{totalClicks}</p>
-                </div>
-
-                <div className="rounded-lg border border-slate-800 bg-slate-900 p-6">
-                  <p className="text-sm text-slate-400">Today&apos;s Clicks</p>
-
-                  <p className="mt-2 text-3xl font-bold">{todaysClicks}</p>
-                </div>
-              </div>
-            </section>
-
-            <section className="mb-10 rounded-xl border border-slate-800 bg-slate-900 p-6">
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold">Clicks Over Time</h2>
-
-                <p className="mt-1 text-sm text-slate-400">
-                  Track the number of clicks your shortened links receive each
-                  day.
-                </p>
-              </div>
-
-              {clicksOverTime.length === 0 ? (
-                <div className="flex h-72 items-center justify-center rounded-lg border border-dashed border-slate-800 bg-slate-950">
-                  <p className="text-sm text-slate-500">
-                    No click data available yet.
-                  </p>
-                </div>
-              ) : (
-                <div className="h-72 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={clicksOverTime}
-                      margin={{
-                        top: 10,
-                        right: 10,
-                        left: -20,
-                        bottom: 0,
-                      }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-
-                      <XAxis
-                        dataKey="date"
-                        stroke="#64748b"
-                        tick={{ fontSize: 12 }}
-                        tickFormatter={(value) =>
-                          new Date(`${value}T00:00:00`).toLocaleDateString(
-                            undefined,
-                            {
-                              month: "short",
-                              day: "numeric",
-                            },
-                          )
-                        }
-                      />
-
-                      <YAxis
-                        allowDecimals={false}
-                        stroke="#64748b"
-                        tick={{ fontSize: 12 }}
-                      />
-
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#0f172a",
-                          border: "1px solid #334155",
-                          borderRadius: "8px",
-                          color: "#fff",
-                        }}
-                        labelFormatter={(value) =>
-                          new Date(`${value}T00:00:00`).toLocaleDateString(
-                            undefined,
-                            {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            },
-                          )
-                        }
-                        formatter={(value) => [value, "Clicks"]}
-                      />
-
-                      <Line
-                        type="monotone"
-                        dataKey="clicks"
-                        stroke="#60a5fa"
-                        strokeWidth={3}
-                        dot={{
-                          r: 4,
-                          fill: "#60a5fa",
-                        }}
-                        activeDot={{
-                          r: 6,
-                        }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </section>
-
-            <section className="mb-10 rounded-xl border border-slate-800 bg-slate-900 p-6">
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold">Link Performance</h2>
-
-                <p className="mt-1 text-sm text-slate-400">
-                  See which shortened links are getting the most traffic.
-                </p>
-              </div>
-
-              {urls.length === 0 ? (
-                <p className="text-slate-400">No links available yet.</p>
-              ) : (
-                <div className="space-y-4">
-                  {urls.map((url) => (
-                    <div
-                      key={url.id}
-                      className="flex items-center justify-between gap-4 rounded-lg border border-slate-800 bg-slate-950 p-4"
-                    >
-                      <div className="min-w-0">
-                        <a
-                          href={`/${url.shortCode}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-blue-400 hover:text-blue-300"
-                        >
-                          /{url.shortCode}
-                        </a>
-
-                        <p className="mt-1 truncate text-sm text-slate-500">
-                          {url.originalUrl}
-                        </p>
-                      </div>
-
-                      <div className="shrink-0 text-right">
-                        <p className="font-semibold">{url.clicks}</p>
-
-                        <p className="text-sm text-slate-500">
-                          {url.clicks === 1 ? "click" : "clicks"}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section className="mb-10 rounded-xl border border-slate-800 bg-slate-900 p-6">
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold">Recent Clicks</h2>
-
-                <p className="mt-1 text-sm text-slate-400">
-                  See recent activity across your shortened links.
-                </p>
-              </div>
-
-              {!analytics?.clicks.length ? (
-                <p className="text-slate-400">No clicks recorded yet.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead className="border-b border-slate-800 text-sm text-slate-400">
-                      <tr>
-                        <th className="px-4 py-3">Short URL</th>
-                        <th className="px-4 py-3">Browser</th>
-                        <th className="px-4 py-3">Referrer</th>
-                        <th className="px-4 py-3">Date</th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {analytics.clicks.slice(0, 10).map((click) => (
-                        <tr
-                          key={click.id}
-                          className="border-b border-slate-800 last:border-0"
-                        >
-                          <td className="px-4 py-4 font-medium text-blue-400">
-                            /{click.shortCode}
-                          </td>
-
-                          <td className="px-4 py-4 text-slate-300">
-                            {getBrowser(click.userAgent)}
-                          </td>
-
-                          <td className="max-w-xs truncate px-4 py-4 text-slate-400">
-                            {click.referrer || "Direct"}
-                          </td>
-
-                          <td className="px-4 py-4 text-slate-400">
-                            {new Date(click.createdAt).toLocaleString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-
-            {urls.length === 0 ? (
-              <div className="rounded-lg border border-slate-800 bg-slate-900 p-8 text-center">
-                <p className="text-slate-400">
-                  You haven&apos;t created any shortened URLs yet.
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-hidden rounded-lg border border-slate-800 bg-slate-900">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead className="border-b border-slate-800 text-sm text-slate-400">
-                      <tr>
-                        <th className="px-6 py-4">Short URL</th>
-                        <th className="px-6 py-4">Original URL</th>
-                        <th className="px-6 py-4">Clicks</th>
-                        <th className="px-6 py-4">Created</th>
-                        <th className="px-6 py-4">Expires</th>
-                        <th className="px-6 py-4">Action</th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {urls.map((url) => {
-                        const expired =
-                          url.expiresAt !== null &&
-                          new Date(url.expiresAt) < new Date();
-
-                        return (
-                          <tr
-                            key={url.id}
-                            className="border-b border-slate-800 last:border-0"
-                          >
-                            <td className="px-6 py-4">
-                              <a
-                                href={`/${url.shortCode}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={`font-medium ${
-                                  expired
-                                    ? "text-slate-500 line-through"
-                                    : "text-blue-400 hover:text-blue-300"
-                                }`}
-                              >
-                                /{url.shortCode}
-                              </a>
-                            </td>
-
-                            <td className="max-w-md truncate px-6 py-4 text-slate-400">
-                              {url.originalUrl}
-                            </td>
-
-                            <td className="px-6 py-4 font-medium">
-                              {url.clicks}
-                            </td>
-
-                            <td className="px-6 py-4 text-slate-400">
-                              {new Date(url.createdAt).toLocaleDateString()}
-                            </td>
-
-                            <td
-                              className={`px-6 py-4 ${
-                                expired
-                                  ? "font-medium text-red-400"
-                                  : "text-slate-400"
-                              }`}
-                            >
-                              {formatExpiration(url.expiresAt)}
-                            </td>
-
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-4">
-                                <button
-                                  onClick={() => openAnalytics(url.shortCode)}
-                                  className="text-blue-400 hover:text-blue-300"
-                                >
-                                  Analytics
-                                </button>
-
-                                <button
-                                  onClick={() => openQrCode(url.shortCode)}
-                                  className="text-blue-400 hover:text-blue-300"
-                                >
-                                  QR Code
-                                </button>
-
-                                <button
-                                  onClick={() => handleDelete(url.id)}
-                                  className="text-red-400 hover:text-red-300"
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </>
-        )}
       </div>
-
-      {analyticsShortCode && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6"
-          onClick={closeAnalytics}
-        >
-          <div
-            className="w-full max-w-3xl rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">Link Analytics</h2>
-
-                <p className="mt-1 text-sm text-slate-400">
-                  /{analyticsShortCode}
-                </p>
-              </div>
-
-              <button
-                onClick={closeAnalytics}
-                className="text-2xl text-slate-400 hover:text-white"
-              >
-                ×
-              </button>
-            </div>
-
-            {(() => {
-              const linkClicks =
-                analytics?.clicks.filter(
-                  (click) => click.shortCode === analyticsShortCode,
-                ) ?? [];
-
-              return (
-                <>
-                  <div className="mt-6 rounded-lg border border-slate-800 bg-slate-950 p-5">
-                    <p className="text-sm text-slate-400">Total Clicks</p>
-
-                    <p className="mt-2 text-3xl font-bold">
-                      {linkClicks.length}
-                    </p>
-                  </div>
-
-                  <div className="mt-6 max-h-80 overflow-y-auto">
-                    {linkClicks.length === 0 ? (
-                      <p className="py-8 text-center text-slate-500">
-                        No clicks recorded for this link yet.
-                      </p>
-                    ) : (
-                      <table className="w-full text-left">
-                        <thead className="border-b border-slate-800 text-sm text-slate-400">
-                          <tr>
-                            <th className="px-4 py-3">Browser</th>
-
-                            <th className="px-4 py-3">Referrer</th>
-
-                            <th className="px-4 py-3">Date</th>
-                          </tr>
-                        </thead>
-
-                        <tbody>
-                          {linkClicks.map((click) => (
-                            <tr
-                              key={click.id}
-                              className="border-b border-slate-800 last:border-0"
-                            >
-                              <td className="px-4 py-4 text-slate-300">
-                                {getBrowser(click.userAgent)}
-                              </td>
-
-                              <td className="max-w-xs truncate px-4 py-4 text-slate-400">
-                                {click.referrer || "Direct"}
-                              </td>
-
-                              <td className="px-4 py-4 text-slate-400">
-                                {new Date(click.createdAt).toLocaleString()}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
-      )}
-
-      {qrUrl && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-6"
-          onClick={closeQrCode}
-        >
-          <div
-            className="w-full max-w-sm rounded-xl border border-slate-700 bg-slate-900 p-6 text-center shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">QR Code</h2>
-
-              <button
-                onClick={closeQrCode}
-                className="text-2xl text-slate-400 hover:text-white"
-              >
-                ×
-              </button>
-            </div>
-
-            <p className="mt-2 break-all text-sm text-slate-400">{qrUrl}</p>
-
-            <div className="mt-6 flex justify-center rounded-lg bg-white p-5">
-              <QRCodeCanvas
-                id="shortly-qr-code"
-                value={qrUrl}
-                size={220}
-                level="H"
-                includeMargin
-              />
-            </div>
-
-            <button
-              onClick={downloadQrCode}
-              className="mt-6 w-full rounded-lg bg-blue-600 px-5 py-3 font-medium transition hover:bg-blue-500"
-            >
-              Download QR Code
-            </button>
-          </div>
-        </div>
-      )}
     </main>
   );
 }
