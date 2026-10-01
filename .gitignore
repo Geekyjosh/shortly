@@ -47,3 +47,5 @@ next-env.d.ts
 .windsurf/skills-lock.json
 .windsurf/
 skills-lock.json
+
+.vercel
