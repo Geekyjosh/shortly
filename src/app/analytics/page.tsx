@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -18,6 +19,7 @@ type Click = {
   urlId: number;
   shortCode: string;
   createdAt: string;
+  country: string | null;
   referrer: string | null;
   userAgent: string | null;
 };
@@ -32,20 +34,109 @@ type UrlItem = {
   expiresAt: string | null;
 };
 
+type CountryStat = {
+  country: string;
+  clicks: number;
+};
+
 type Analytics = {
   totalClicks: number;
   totalLinks: number;
   urls: UrlItem[];
   clicks: Click[];
+  countries: CountryStat[];
 };
+
+const countryNames: Record<string, string> = {
+  AF: "Afghanistan",
+  AL: "Albania",
+  DZ: "Algeria",
+  AR: "Argentina",
+  AU: "Australia",
+  AT: "Austria",
+  BD: "Bangladesh",
+  BE: "Belgium",
+  BR: "Brazil",
+  CA: "Canada",
+  CL: "Chile",
+  CN: "China",
+  CO: "Colombia",
+  HR: "Croatia",
+  CZ: "Czech Republic",
+  DK: "Denmark",
+  EG: "Egypt",
+  FI: "Finland",
+  FR: "France",
+  DE: "Germany",
+  GH: "Ghana",
+  GR: "Greece",
+  HK: "Hong Kong",
+  HU: "Hungary",
+  IN: "India",
+  ID: "Indonesia",
+  IE: "Ireland",
+  IL: "Israel",
+  IT: "Italy",
+  JP: "Japan",
+  KE: "Kenya",
+  MY: "Malaysia",
+  MX: "Mexico",
+  MA: "Morocco",
+  NL: "Netherlands",
+  NZ: "New Zealand",
+  NG: "Nigeria",
+  NO: "Norway",
+  PK: "Pakistan",
+  PE: "Peru",
+  PH: "Philippines",
+  PL: "Poland",
+  PT: "Portugal",
+  RO: "Romania",
+  RU: "Russia",
+  SA: "Saudi Arabia",
+  SG: "Singapore",
+  ZA: "South Africa",
+  KR: "South Korea",
+  ES: "Spain",
+  SE: "Sweden",
+  CH: "Switzerland",
+  TW: "Taiwan",
+  TZ: "Tanzania",
+  TH: "Thailand",
+  TR: "Turkey",
+  UG: "Uganda",
+  UA: "Ukraine",
+  AE: "United Arab Emirates",
+  GB: "United Kingdom",
+  US: "United States",
+  VN: "Vietnam",
+  ZM: "Zambia",
+  ZW: "Zimbabwe",
+};
+
+function getCountryName(code: string) {
+  if (code === "Unknown") {
+    return "Unknown";
+  }
+
+  return countryNames[code] || code;
+}
+
+function getCountryFlag(code: string) {
+  if (!/^[A-Z]{2}$/.test(code)) {
+    return "🌐";
+  }
+
+  return String.fromCodePoint(
+    ...code.split("").map((character) => 127397 + character.charCodeAt(0)),
+  );
+}
 
 export default function AnalyticsPage() {
   const router = useRouter();
 
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
-
   const [loading, setLoading] = useState(true);
-
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -144,6 +235,14 @@ export default function AnalyticsPage() {
     return Object.entries(counts).sort(([, a], [, b]) => b - a);
   }, [analytics]);
 
+  const countryStats = useMemo(() => {
+    if (!analytics) {
+      return [];
+    }
+
+    return analytics.countries.slice(0, 10);
+  }, [analytics]);
+
   function getBrowser(userAgent: string | null) {
     if (!userAgent) {
       return "Unknown";
@@ -222,11 +321,15 @@ export default function AnalyticsPage() {
       <div className="mx-auto max-w-7xl">
         <header className="mb-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div>
-            <Link
-              href="/dashboard"
-              className="text-lg font-bold tracking-tight text-blue-400"
-            >
-              Shortly
+            <Link href="/dashboard" className="flex items-center">
+              <Image
+                src="/logo.svg"
+                alt="Shortly logo"
+                width={140}
+                height={40}
+                priority
+                className="h-10 w-auto"
+              />
             </Link>
 
             <p className="mt-6 text-sm font-medium uppercase tracking-[0.2em] text-blue-400">
@@ -356,6 +459,68 @@ export default function AnalyticsPage() {
 
         <div className="mb-8 grid gap-8 lg:grid-cols-2">
           <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+            <h2 className="text-xl font-semibold">Geographic analytics</h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              See where your shortened links are being clicked around the world.
+            </p>
+
+            <div className="mt-6 space-y-3">
+              {countryStats.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-slate-800 bg-slate-950 p-8 text-center">
+                  <p className="text-sm text-slate-500">
+                    No geographic data available yet.
+                  </p>
+                </div>
+              ) : (
+                countryStats.map(({ country, clicks }) => {
+                  const percentage = analytics.totalClicks
+                    ? Math.round((clicks / analytics.totalClicks) * 100)
+                    : 0;
+
+                  return (
+                    <div
+                      key={country}
+                      className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span className="text-xl">
+                            {getCountryFlag(country)}
+                          </span>
+
+                          <span className="truncate text-sm font-medium text-slate-200">
+                            {getCountryName(country)}
+                          </span>
+                        </div>
+
+                        <div className="shrink-0 text-right">
+                          <p className="text-sm font-semibold text-white">
+                            {clicks}
+                          </p>
+
+                          <p className="text-xs text-slate-500">
+                            {percentage}%
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-800">
+                        <div
+                          className="h-full rounded-full bg-blue-500"
+                          style={{
+                            width: `${Math.max(percentage, 2)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
             <h2 className="text-xl font-semibold">Top links</h2>
 
             <p className="mt-1 text-sm text-slate-500">
@@ -391,7 +556,9 @@ export default function AnalyticsPage() {
               )}
             </div>
           </section>
+        </div>
 
+        <div className="mb-8 grid gap-8 lg:grid-cols-2">
           <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
             <h2 className="text-xl font-semibold">Traffic sources</h2>
 
@@ -420,34 +587,34 @@ export default function AnalyticsPage() {
               )}
             </div>
           </section>
+
+          <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+            <h2 className="text-xl font-semibold">Browsers</h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Browsers used to access your links.
+            </p>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              {browserStats.length === 0 ? (
+                <p className="text-sm text-slate-500">No browser data yet.</p>
+              ) : (
+                browserStats.map(([browser, count]) => (
+                  <div
+                    key={browser}
+                    className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+                  >
+                    <p className="text-sm text-slate-400">{browser}</p>
+
+                    <p className="mt-2 text-2xl font-bold">{count}</p>
+
+                    <p className="mt-1 text-xs text-slate-600">clicks</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
         </div>
-
-        <section className="mb-8 rounded-2xl border border-slate-800 bg-slate-900 p-6">
-          <h2 className="text-xl font-semibold">Browsers</h2>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Browsers used to access your links.
-          </p>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {browserStats.length === 0 ? (
-              <p className="text-sm text-slate-500">No browser data yet.</p>
-            ) : (
-              browserStats.map(([browser, count]) => (
-                <div
-                  key={browser}
-                  className="rounded-xl border border-slate-800 bg-slate-950 p-4"
-                >
-                  <p className="text-sm text-slate-400">{browser}</p>
-
-                  <p className="mt-2 text-2xl font-bold">{count}</p>
-
-                  <p className="mt-1 text-xs text-slate-600">clicks</p>
-                </div>
-              ))
-            )}
-          </div>
-        </section>
 
         <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
           <div className="mb-6">
@@ -464,10 +631,12 @@ export default function AnalyticsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px] text-left">
+              <table className="w-full min-w-[800px] text-left">
                 <thead className="border-b border-slate-800 text-xs uppercase tracking-wider text-slate-500">
                   <tr>
                     <th className="px-4 py-3">Short URL</th>
+
+                    <th className="px-4 py-3">Country</th>
 
                     <th className="px-4 py-3">Browser</th>
 
@@ -485,6 +654,14 @@ export default function AnalyticsPage() {
                     >
                       <td className="px-4 py-4 font-medium text-blue-400">
                         /{click.shortCode}
+                      </td>
+
+                      <td className="px-4 py-4 text-slate-300">
+                        <span className="mr-2">
+                          {getCountryFlag(click.country || "Unknown")}
+                        </span>
+
+                        {getCountryName(click.country || "Unknown")}
                       </td>
 
                       <td className="px-4 py-4 text-slate-300">

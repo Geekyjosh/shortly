@@ -65,6 +65,7 @@ export async function GET(
       );
     }
 
+    const country = request.headers.get("x-vercel-ip-country");
     const referrer = request.headers.get("referer");
     const userAgent = request.headers.get("user-agent");
 
@@ -76,9 +77,9 @@ export async function GET(
       `,
       prisma.$executeRaw`
         INSERT INTO "Click"
-          ("urlId", "createdAt", "referrer", "userAgent")
+          ("urlId", "createdAt", "country", "referrer", "userAgent")
         VALUES
-          (${url.id}, NOW(), ${referrer}, ${userAgent})
+          (${url.id}, NOW(), ${country}, ${referrer}, ${userAgent})
       `,
     ]);
 

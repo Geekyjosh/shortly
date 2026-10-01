@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { Check, Copy, Mail, Share2, X } from "lucide-react";
 
@@ -18,6 +19,18 @@ type ShareModalProps = {
   url: string;
   onCopy: () => void;
   onClose: () => void;
+};
+
+type EditModalProps = {
+  item: UrlItem;
+  onSave: (
+    id: number,
+    url: string,
+    alias: string,
+    expiresAt: string,
+  ) => Promise<void>;
+  onClose: () => void;
+  saving: boolean;
 };
 
 function WhatsAppIcon() {
@@ -92,7 +105,6 @@ function ShareModal({ url, onCopy, onClose }: ShareModalProps) {
 
   function openShare(target: string) {
     window.open(target, "_blank", "noopener,noreferrer,width=700,height=600");
-
     onClose();
   }
 
@@ -166,7 +178,7 @@ function ShareModal({ url, onCopy, onClose }: ShareModalProps) {
               }
               className="group flex flex-col items-center gap-2"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-500/10 text-green-400 transition group-hover:bg-green-500/20 group-hover:scale-105">
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-500/10 text-green-400 transition group-hover:scale-105 group-hover:bg-green-500/20">
                 <WhatsAppIcon />
               </span>
 
@@ -184,7 +196,7 @@ function ShareModal({ url, onCopy, onClose }: ShareModalProps) {
               }
               className="group flex flex-col items-center gap-2"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 text-white transition group-hover:bg-white/10 group-hover:scale-105">
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 text-white transition group-hover:scale-105 group-hover:bg-white/10">
                 <XBrandIcon />
               </span>
 
@@ -202,7 +214,7 @@ function ShareModal({ url, onCopy, onClose }: ShareModalProps) {
               }
               className="group flex flex-col items-center gap-2"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 transition group-hover:bg-blue-500/20 group-hover:scale-105">
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 transition group-hover:scale-105 group-hover:bg-blue-500/20">
                 <FacebookIcon />
               </span>
 
@@ -220,7 +232,7 @@ function ShareModal({ url, onCopy, onClose }: ShareModalProps) {
               }
               className="group flex flex-col items-center gap-2"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 transition group-hover:bg-blue-500/20 group-hover:scale-105">
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 transition group-hover:scale-105 group-hover:bg-blue-500/20">
                 <LinkedinIcon />
               </span>
 
@@ -286,6 +298,7 @@ function ShareModal({ url, onCopy, onClose }: ShareModalProps) {
                     <span className="block text-sm font-medium text-slate-300">
                       More sharing options
                     </span>
+
                     <span className="mt-0.5 block text-xs text-slate-500">
                       Use your device&apos;s native share menu
                     </span>
@@ -294,6 +307,190 @@ function ShareModal({ url, onCopy, onClose }: ShareModalProps) {
               )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function EditModal({ item, onSave, onClose, saving }: EditModalProps) {
+  const [url, setUrl] = useState(item.originalUrl);
+  const [alias, setAlias] = useState(item.shortCode);
+  const [expiresAt, setExpiresAt] = useState(
+    item.expiresAt ? new Date(item.expiresAt).toISOString().slice(0, 16) : "",
+  );
+  const [formError, setFormError] = useState("");
+
+  useEffect(() => {
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape" && !saving) {
+        onClose();
+      }
+    }
+
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [onClose, saving]);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFormError("");
+
+    if (!url.trim()) {
+      setFormError("Destination URL is required.");
+      return;
+    }
+
+    try {
+      new URL(url.trim());
+    } catch {
+      setFormError("Please enter a valid URL.");
+      return;
+    }
+
+    await onSave(item.id, url.trim(), alias.trim(), expiresAt);
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-sm"
+      onClick={() => {
+        if (!saving) onClose();
+      }}
+      role="presentation"
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-dialog-title"
+      >
+        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-5">
+          <div>
+            <h2
+              id="edit-dialog-title"
+              className="text-lg font-semibold text-white"
+            >
+              Edit link
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Update where your shortened link points.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-800 hover:text-white disabled:opacity-50"
+            aria-label="Close edit dialog"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6 px-6 py-6">
+          {formError && (
+            <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+              {formError}
+            </div>
+          )}
+
+          <div>
+            <label
+              htmlFor="edit-url"
+              className="mb-2 block text-sm font-medium text-slate-300"
+            >
+              Destination URL
+            </label>
+
+            <input
+              id="edit-url"
+              type="url"
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+              placeholder="https://example.com"
+              disabled={saving}
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-blue-500 disabled:opacity-50"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="edit-alias"
+              className="mb-2 block text-sm font-medium text-slate-300"
+            >
+              Custom alias
+            </label>
+
+            <div className="flex overflow-hidden rounded-xl border border-slate-700 bg-slate-950 focus-within:border-blue-500">
+              <span className="flex items-center border-r border-slate-700 px-3 text-sm text-slate-600">
+                {typeof window !== "undefined"
+                  ? `${window.location.host}/`
+                  : "shortly/"}
+              </span>
+
+              <input
+                id="edit-alias"
+                type="text"
+                value={alias}
+                onChange={(event) => setAlias(event.target.value)}
+                placeholder="my-link"
+                disabled={saving}
+                className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm text-white outline-none placeholder:text-slate-600 disabled:opacity-50"
+              />
+            </div>
+
+            <p className="mt-2 text-xs text-slate-500">
+              Use letters, numbers, hyphens, or underscores.
+            </p>
+          </div>
+
+          <div>
+            <label
+              htmlFor="edit-expires"
+              className="mb-2 block text-sm font-medium text-slate-300"
+            >
+              Expiration date
+            </label>
+
+            <input
+              id="edit-expires"
+              type="datetime-local"
+              value={expiresAt}
+              onChange={(event) => setExpiresAt(event.target.value)}
+              disabled={saving}
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-blue-500 disabled:opacity-50"
+            />
+
+            <p className="mt-2 text-xs text-slate-500">
+              Leave empty if the link should not expire.
+            </p>
+          </div>
+
+          <div className="flex flex-col-reverse gap-3 border-t border-slate-800 pt-5 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-medium text-slate-300 transition hover:border-slate-600 hover:bg-slate-800 hover:text-white disabled:opacity-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {saving ? "Saving changes..." : "Save changes"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -309,6 +506,8 @@ export default function Dashboard() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [actionId, setActionId] = useState<number | null>(null);
   const [shareId, setShareId] = useState<number | null>(null);
+  const [editItem, setEditItem] = useState<UrlItem | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -406,6 +605,49 @@ export default function Dashboard() {
     }
   }
 
+  async function saveEdit(
+    id: number,
+    url: string,
+    alias: string,
+    expiresAt: string,
+  ) {
+    setSavingEdit(true);
+
+    try {
+      const response = await fetch("/api/urls", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id,
+          url,
+          alias,
+          expiresAt,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to update link.");
+      }
+
+      setUrls((currentUrls) =>
+        currentUrls.map((item) => (item.id === id ? data.url : item)),
+      );
+
+      setEditItem(null);
+      setToast("Link updated successfully.");
+    } catch (error) {
+      setToast(
+        error instanceof Error ? error.message : "Unable to update link.",
+      );
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
   async function deleteLink(id: number) {
     const confirmed = window.confirm(
       "Are you sure you want to delete this link? This action cannot be undone.",
@@ -434,6 +676,10 @@ export default function Dashboard() {
 
       if (shareId === id) {
         setShareId(null);
+      }
+
+      if (editItem?.id === id) {
+        setEditItem(null);
       }
 
       setToast("Link deleted successfully.");
@@ -521,13 +767,27 @@ export default function Dashboard() {
         />
       )}
 
+      {editItem && (
+        <EditModal
+          item={editItem}
+          onSave={saveEdit}
+          onClose={() => {
+            if (!savingEdit) setEditItem(null);
+          }}
+          saving={savingEdit}
+        />
+      )}
+
       <header className="border-b border-slate-800 bg-slate-950/90">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <Link
-            href="/dashboard"
-            className="text-lg font-bold tracking-tight text-blue-400"
-          >
-            Shortly
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <Image
+              src="/logo.svg"
+              alt="Shortly logo"
+              width={120}
+              height={32}
+              priority
+            />
           </Link>
 
           <nav className="flex items-center gap-6">
@@ -736,6 +996,15 @@ export default function Dashboard() {
                       </div>
 
                       <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditItem(item)}
+                          disabled={busy}
+                          className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-blue-500 hover:text-white disabled:opacity-50"
+                        >
+                          Edit
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => copyLink(item.shortCode)}

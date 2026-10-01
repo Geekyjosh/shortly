@@ -47,6 +47,7 @@ export async function GET() {
         urlId: number;
         shortCode: string;
         createdAt: Date;
+        country: string | null;
         referrer: string | null;
         userAgent: string | null;
       }[]
@@ -56,6 +57,7 @@ export async function GET() {
         c."urlId",
         u."shortCode",
         c."createdAt",
+        c."country",
         c."referrer",
         c."userAgent"
       FROM "Click" c
@@ -65,6 +67,21 @@ export async function GET() {
       ORDER BY c."createdAt" DESC
     `;
 
+    const countryCounts: Record<string, number> = {};
+
+    clicks.forEach((click) => {
+      const country = click.country || "Unknown";
+
+      countryCounts[country] = (countryCounts[country] || 0) + 1;
+    });
+
+    const countries = Object.entries(countryCounts)
+      .sort(([, a], [, b]) => b - a)
+      .map(([country, clicks]) => ({
+        country,
+        clicks,
+      }));
+
     const totalClicks = urls.reduce((total, url) => total + url.clicks, 0);
 
     return NextResponse.json({
@@ -72,6 +89,7 @@ export async function GET() {
       totalLinks: urls.length,
       urls,
       clicks,
+      countries,
     });
   } catch (error) {
     console.error("Analytics error:", error);
