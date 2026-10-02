@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/auth";
 
@@ -23,6 +25,9 @@ async function generateUniqueShortCode() {
       where: {
         shortCode,
       },
+      select: {
+        id: true,
+      },
     });
 
     if (!existingUrl) {
@@ -31,6 +36,18 @@ async function generateUniqueShortCode() {
 
     shortCode = generateShortCode();
   }
+}
+
+async function getAnonymousId() {
+  const cookieStore = await cookies();
+
+  let anonymousId = cookieStore.get("shortly_guest_id")?.value;
+
+  if (!anonymousId) {
+    anonymousId = randomUUID();
+  }
+
+  return anonymousId;
 }
 
 function parseExpiration(value: unknown) {
@@ -55,6 +72,12 @@ function isValidAlias(alias: string) {
   return /^[a-zA-Z0-9_-]+$/.test(alias);
 }
 
+/*
+|--------------------------------------------------------------------------
+| GET /api/urls
+|--------------------------------------------------------------------------
+| Returns all links belonging to the currently authenticated user.
+*/
 export async function GET() {
   try {
     const userId = await getCurrentUserId();
@@ -70,29 +93,23 @@ export async function GET() {
       );
     }
 
-    const urls = await prisma.$queryRaw<
-      {
-        id: number;
-        originalUrl: string;
-        shortCode: string;
-        clicks: number;
-        active: boolean;
-        createdAt: Date;
-        expiresAt: Date | null;
-      }[]
-    >`
-      SELECT
-        "id",
-        "originalUrl",
-        "shortCode",
-        "clicks",
-        "active",
-        "createdAt",
-        "expiresAt"
-      FROM "Url"
-      WHERE "userId" = ${userId}
-      ORDER BY "createdAt" DESC
-    `;
+    const urls = await prisma.url.findMany({
+      where: {
+        userId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        originalUrl: true,
+        shortCode: true,
+        clicks: true,
+        active: true,
+        createdAt: true,
+        expiresAt: true,
+      },
+    });
 
     return NextResponse.json({
       urls,
@@ -112,27 +129,34 @@ export async function GET() {
   }
 }
 
+/*
+|--------------------------------------------------------------------------
+| POST /api/urls
+|--------------------------------------------------------------------------
+| Creates a URL for either:
+| - an authenticated user
+| - a guest user with a maximum of 5 links
+|--------------------------------------------------------------------------
+*/
 export async function POST(request: Request) {
   try {
-    const userId = await getCurrentUserId();
-
-    if (!userId) {
-      return NextResponse.json(
-        {
-          error: "Authentication required",
-        },
-        {
-          status: 401,
-        },
-      );
-    }
-
     const body = await request.json();
 
     const url = typeof body.url === "string" ? body.url.trim() : "";
 
     const alias = typeof body.alias === "string" ? body.alias.trim() : "";
 
+    const userId = await getCurrentUserId();
+
+    /*
+     * Authenticated users belong to their account.
+     * Guests receive a browser-based anonymous ID.
+     */
+    const anonymousId = userId ? null : await getAnonymousId();
+
+    /*
+     * Validate URL before doing database work.
+     */
     if (!url) {
       return NextResponse.json(
         {
@@ -157,6 +181,33 @@ export async function POST(request: Request) {
       );
     }
 
+    /*
+     * Guests can create a maximum of 5 links.
+     */
+    if (!userId && anonymousId) {
+      const guestLinkCount = await prisma.url.count({
+        where: {
+          anonymousId,
+        },
+      });
+
+      if (guestLinkCount >= 5) {
+        return NextResponse.json(
+          {
+            error:
+              "You have reached the free limit of 5 links. Create a free account to continue creating links and manage them from your dashboard.",
+            limitReached: true,
+          },
+          {
+            status: 403,
+          },
+        );
+      }
+    }
+
+    /*
+     * Validate expiration date.
+     */
     const expirationDate = parseExpiration(body.expiresAt);
 
     if (
@@ -174,6 +225,9 @@ export async function POST(request: Request) {
       );
     }
 
+    /*
+     * Generate or validate custom alias.
+     */
     let shortCode = alias;
 
     if (alias) {
@@ -204,6 +258,9 @@ export async function POST(request: Request) {
         where: {
           shortCode: alias,
         },
+        select: {
+          id: true,
+        },
       });
 
       if (existingUrl) {
@@ -220,63 +277,60 @@ export async function POST(request: Request) {
       shortCode = await generateUniqueShortCode();
     }
 
-    await prisma.$executeRaw`
-      INSERT INTO "Url"
-        (
-          "originalUrl",
-          "shortCode",
-          "clicks",
-          "active",
-          "createdAt",
-          "expiresAt",
-          "userId"
-        )
-      VALUES
-        (
-          ${url},
-          ${shortCode},
-          0,
-          true,
-          NOW(),
-          ${expirationDate},
-          ${userId}
-        )
-    `;
+    /*
+     * Create the link.
+     */
+    const createdUrl = await prisma.url.create({
+      data: {
+        originalUrl: url,
+        shortCode,
+        clicks: 0,
+        active: true,
+        expiresAt: expirationDate,
+        userId,
+        anonymousId,
+      },
+      select: {
+        id: true,
+        originalUrl: true,
+        shortCode: true,
+        clicks: true,
+        active: true,
+        createdAt: true,
+        expiresAt: true,
+        anonymousId: true,
+      },
+    });
 
-    const createdUrl = await prisma.$queryRaw<
-      {
-        id: number;
-        originalUrl: string;
-        shortCode: string;
-        clicks: number;
-        active: boolean;
-        createdAt: Date;
-        expiresAt: Date | null;
-      }[]
-    >`
-      SELECT
-        "id",
-        "originalUrl",
-        "shortCode",
-        "clicks",
-        "active",
-        "createdAt",
-        "expiresAt"
-      FROM "Url"
-      WHERE "shortCode" = ${shortCode}
-      AND "userId" = ${userId}
-      LIMIT 1
-    `;
-
-    return NextResponse.json(
+    /*
+     * Return the newly-created link.
+     */
+    const response = NextResponse.json(
       {
         message: "URL shortened successfully",
-        ...createdUrl[0],
+        ...createdUrl,
+        guest: !userId,
+        guestLimit: !userId ? 5 : null,
       },
       {
         status: 201,
       },
     );
+
+    /*
+     * Remember the guest browser for one year.
+     */
+    if (!userId && anonymousId) {
+      response.cookies.set("shortly_guest_id", anonymousId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 365,
+        path: "/",
+      });
+    }
+
+    return response;
   } catch (error) {
     console.error("URL creation error:", error);
 
@@ -294,6 +348,13 @@ export async function POST(request: Request) {
   }
 }
 
+/*
+|--------------------------------------------------------------------------
+| PUT /api/urls
+|--------------------------------------------------------------------------
+| Updates a link belonging to the authenticated user.
+|--------------------------------------------------------------------------
+*/
 export async function PUT(request: Request) {
   try {
     const userId = await getCurrentUserId();
@@ -352,6 +413,9 @@ export async function PUT(request: Request) {
       );
     }
 
+    /*
+     * Validate expiration.
+     */
     const expirationDate = parseExpiration(body.expiresAt);
 
     if (
@@ -369,22 +433,21 @@ export async function PUT(request: Request) {
       );
     }
 
-    const existingUrls = await prisma.$queryRaw<
-      {
-        id: number;
-        shortCode: string;
-      }[]
-    >`
-      SELECT
-        "id",
-        "shortCode"
-      FROM "Url"
-      WHERE "id" = ${id}
-      AND "userId" = ${userId}
-      LIMIT 1
-    `;
+    /*
+     * Make sure the URL belongs to the current user.
+     */
+    const currentUrl = await prisma.url.findFirst({
+      where: {
+        id,
+        userId,
+      },
+      select: {
+        id: true,
+        shortCode: true,
+      },
+    });
 
-    if (existingUrls.length === 0) {
+    if (!currentUrl) {
       return NextResponse.json(
         {
           error: "URL not found",
@@ -395,10 +458,11 @@ export async function PUT(request: Request) {
       );
     }
 
-    const currentUrl = existingUrls[0];
-
     let shortCode = currentUrl.shortCode;
 
+    /*
+     * Validate a new alias if provided.
+     */
     if (alias) {
       if (!isValidAlias(alias)) {
         return NextResponse.json(
@@ -423,19 +487,19 @@ export async function PUT(request: Request) {
         );
       }
 
-      const existingAlias = await prisma.$queryRaw<
-        {
-          id: number;
-        }[]
-      >`
-        SELECT "id"
-        FROM "Url"
-        WHERE "shortCode" = ${alias}
-        AND "id" <> ${id}
-        LIMIT 1
-      `;
+      const existingAlias = await prisma.url.findFirst({
+        where: {
+          shortCode: alias,
+          NOT: {
+            id,
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
 
-      if (existingAlias.length > 0) {
+      if (existingAlias) {
         return NextResponse.json(
           {
             error: "That custom alias is already in use",
@@ -449,44 +513,32 @@ export async function PUT(request: Request) {
       shortCode = alias;
     }
 
-    await prisma.$executeRaw`
-      UPDATE "Url"
-      SET
-        "originalUrl" = ${url},
-        "shortCode" = ${shortCode},
-        "expiresAt" = ${expirationDate}
-      WHERE "id" = ${id}
-      AND "userId" = ${userId}
-    `;
-
-    const updatedUrl = await prisma.$queryRaw<
-      {
-        id: number;
-        originalUrl: string;
-        shortCode: string;
-        clicks: number;
-        active: boolean;
-        createdAt: Date;
-        expiresAt: Date | null;
-      }[]
-    >`
-      SELECT
-        "id",
-        "originalUrl",
-        "shortCode",
-        "clicks",
-        "active",
-        "createdAt",
-        "expiresAt"
-      FROM "Url"
-      WHERE "id" = ${id}
-      AND "userId" = ${userId}
-      LIMIT 1
-    `;
+    /*
+     * Update the link.
+     */
+    const updatedUrl = await prisma.url.update({
+      where: {
+        id,
+      },
+      data: {
+        originalUrl: url,
+        shortCode,
+        expiresAt: expirationDate,
+      },
+      select: {
+        id: true,
+        originalUrl: true,
+        shortCode: true,
+        clicks: true,
+        active: true,
+        createdAt: true,
+        expiresAt: true,
+      },
+    });
 
     return NextResponse.json({
       message: "URL updated successfully",
-      url: updatedUrl[0],
+      url: updatedUrl,
     });
   } catch (error) {
     console.error("URL update error:", error);
@@ -502,6 +554,13 @@ export async function PUT(request: Request) {
   }
 }
 
+/*
+|--------------------------------------------------------------------------
+| PATCH /api/urls
+|--------------------------------------------------------------------------
+| Toggles the active/inactive status of a user's link.
+|--------------------------------------------------------------------------
+*/
 export async function PATCH(request: Request) {
   try {
     const userId = await getCurrentUserId();
@@ -518,6 +577,7 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json();
+
     const id = Number(body.id);
 
     if (!Number.isInteger(id) || id <= 0) {
@@ -531,24 +591,19 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const urls = await prisma.$queryRaw<
-      {
-        id: number;
-        shortCode: string;
-        active: boolean;
-      }[]
-    >`
-      SELECT
-        "id",
-        "shortCode",
-        "active"
-      FROM "Url"
-      WHERE "id" = ${id}
-      AND "userId" = ${userId}
-      LIMIT 1
-    `;
+    const url = await prisma.url.findFirst({
+      where: {
+        id,
+        userId,
+      },
+      select: {
+        id: true,
+        shortCode: true,
+        active: true,
+      },
+    });
 
-    if (urls.length === 0) {
+    if (!url) {
       return NextResponse.json(
         {
           error: "URL not found",
@@ -559,25 +614,27 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const url = urls[0];
     const newActiveStatus = !url.active;
 
-    await prisma.$executeRaw`
-      UPDATE "Url"
-      SET "active" = ${newActiveStatus}
-      WHERE "id" = ${id}
-      AND "userId" = ${userId}
-    `;
+    const updatedUrl = await prisma.url.update({
+      where: {
+        id,
+      },
+      data: {
+        active: newActiveStatus,
+      },
+      select: {
+        id: true,
+        shortCode: true,
+        active: true,
+      },
+    });
 
     return NextResponse.json({
       message: newActiveStatus
         ? "Link activated successfully"
         : "Link disabled successfully",
-      url: {
-        id: url.id,
-        shortCode: url.shortCode,
-        active: newActiveStatus,
-      },
+      url: updatedUrl,
     });
   } catch (error) {
     console.error("URL status update error:", error);
@@ -596,6 +653,13 @@ export async function PATCH(request: Request) {
   }
 }
 
+/*
+|--------------------------------------------------------------------------
+| DELETE /api/urls
+|--------------------------------------------------------------------------
+| Deletes a link belonging to the authenticated user.
+|--------------------------------------------------------------------------
+*/
 export async function DELETE(request: Request) {
   try {
     const userId = await getCurrentUserId();
@@ -612,6 +676,7 @@ export async function DELETE(request: Request) {
     }
 
     const body = await request.json();
+
     const id = Number(body.id);
 
     if (!Number.isInteger(id) || id <= 0) {
@@ -625,13 +690,17 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const result = await prisma.$executeRaw`
-      DELETE FROM "Url"
-      WHERE "id" = ${id}
-      AND "userId" = ${userId}
-    `;
+    const existingUrl = await prisma.url.findFirst({
+      where: {
+        id,
+        userId,
+      },
+      select: {
+        id: true,
+      },
+    });
 
-    if (result === 0) {
+    if (!existingUrl) {
       return NextResponse.json(
         {
           error: "URL not found",
@@ -641,6 +710,12 @@ export async function DELETE(request: Request) {
         },
       );
     }
+
+    await prisma.url.delete({
+      where: {
+        id,
+      },
+    });
 
     return NextResponse.json({
       message: "URL deleted successfully",

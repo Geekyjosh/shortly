@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -50,11 +51,14 @@ export default function LoginPage() {
       <div className="mx-auto flex min-h-[80vh] max-w-md items-center justify-center">
         <div className="w-full">
           <div className="mb-8 text-center">
-            <Link
-              href="/"
-              className="text-sm font-medium uppercase tracking-widest text-blue-400"
-            >
-              Shortly
+            <Link href="/" className="flex items-center justify-center">
+              <Image
+                src="/logo.svg"
+                alt="Shortly logo"
+                width={160}
+                height={50}
+                priority
+              />
             </Link>
 
             <h1 className="mt-4 text-3xl font-bold">Welcome back</h1>

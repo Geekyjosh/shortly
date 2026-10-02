@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Copy, Mail, Share2, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useTheme } from "@/components/ThemeProvider";
 
 type ShareModalProps = {
   url: string;
@@ -9,202 +9,214 @@ type ShareModalProps = {
   onClose: () => void;
 };
 
-function WhatsAppIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
-      <path d="M20.52 3.48A11.87 11.87 0 0 0 12.05 0C5.49 0 .14 5.35.14 11.91c0 2.1.55 4.15 1.6 5.96L.03 24l6.27-1.64a11.87 11.87 0 0 0 5.75 1.47h.01c6.55 0 11.9-5.35 11.9-11.91 0-3.18-1.24-6.17-3.44-8.44ZM12.06 21.79a9.87 9.87 0 0 1-5.03-1.38l-.36-.21-3.72.98.99-3.63-.23-.37a9.86 9.86 0 0 1-1.51-5.27C2.2 6.47 6.62 2.05 12.06 2.05c2.63 0 5.1 1.03 6.96 2.9a9.78 9.78 0 0 1 2.88 6.96c0 5.45-4.42 9.88-9.84 9.88Zm5.41-7.4c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.25-.46-2.39-1.47-.88-.78-1.47-1.74-1.64-2.04-.17-.3-.02-.46.13-.61.14-.14.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.49s1.07 2.89 1.22 3.09c.15.2 2.1 3.2 5.09 4.49.71.31 1.26.49 1.69.63.71.23 1.35.2 1.86.12.57-.08 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35Z" />
-    </svg>
-  );
-}
-
-function XIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
-      <path d="M18.244 2H21.5l-7.11 8.13L22.75 22h-6.55l-5.13-6.71L5.2 22H1.94l7.61-8.7L1.5 2h6.72l4.64 6.1L18.244 2Zm-1.15 17.75h1.81L7.22 4.13H5.28L17.094 19.75Z" />
-    </svg>
-  );
-}
-
-function FacebookIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
-      <path d="M24 12.07C24 5.41 18.63 0 12 0S0 5.41 0 12.07C0 18.09 4.39 23.08 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.03 1.79-4.72 4.55-4.72 1.32 0 2.7.24 2.7.24v2.99h-1.52c-1.5 0-1.97.94-1.97 1.9v2.28h3.35l-.54 3.49h-2.81V24C19.61 23.08 24 18.09 24 12.07Z" />
-    </svg>
-  );
-}
-
-function LinkedInIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
-      <path d="M20.45 20.45h-3.56v-5.58c0-1.33-.03-3.05-1.86-3.05-1.86 0-2.14 1.45-2.14 2.95v5.68H9.33V8.99h3.42v1.56h.05c.48-.9 1.64-1.86 3.37-1.86 3.6 0 4.27 2.37 4.27 5.46v6.3ZM5.31 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14ZM3.53 20.45h3.56V8.99H3.53v11.46ZM22.23 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.46c.98 0 1.77-.77 1.77-1.73V1.73C24 .77 23.21 0 22.23 0Z" />
-    </svg>
-  );
-}
-
 export default function ShareModal({ url, open, onClose }: ShareModalProps) {
+  const { darkMode } = useTheme();
   const [copied, setCopied] = useState(false);
+  const [canNativeShare, setCanNativeShare] = useState(false);
 
-  if (!open) {
-    return null;
-  }
+  useEffect(() => {
+    setCanNativeShare(typeof navigator.share === "function");
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      setCopied(false);
+      return;
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+
+    document.addEventListener("keydown", handleEscape);
+
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [open, onClose]);
+
+  if (!open || !url) return null;
 
   const encodedUrl = encodeURIComponent(url);
+  const shareText = encodeURIComponent("Check out this link from Shortly");
 
-  const copyUrl = async () => {
+  function openShare(target: string) {
+    window.open(target, "_blank", "noopener,noreferrer,width=700,height=600");
+    onClose();
+  }
+
+  async function copyLink() {
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
-
-      setTimeout(() => {
-        setCopied(false);
-      }, 2000);
+      setTimeout(() => setCopied(false), 2000);
     } catch {
-      setCopied(false);
+      /* clipboard unavailable */
     }
-  };
+  }
 
-  const shareNative = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "Check out this link",
-          url,
-        });
-      } catch {}
-    } else {
-      await copyUrl();
+  async function nativeShare() {
+    try {
+      await navigator.share({ title: "Shortly link", url });
+      onClose();
+    } catch {
+      /* user cancelled */
     }
-  };
+  }
 
-  const shareLinks = [
+  const options = [
     {
-      name: "WhatsApp",
-      icon: <WhatsAppIcon />,
-      url: `https://wa.me/?text=${encodedUrl}`,
-      className: "bg-[#25D366] hover:bg-[#20bd5a]",
+      label: "WhatsApp",
+      color: "bg-green-500 hover:bg-green-600",
+      href: `https://wa.me/?text=${shareText}%20${encodedUrl}`,
+      icon: (
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.521-.075-.149-.669-1.611-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.372-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.004 2a9.95 9.95 0 0 0-8.47 15.1L2 22l4.9-1.526A10 10 0 1 0 12.004 2m0 18.3a8.3 8.3 0 0 1-4.23-1.157l-.303-.18-2.91.906.922-2.834-.198-.308A8.3 8.3 0 1 1 12.004 20.3" />
+      ),
     },
     {
-      name: "X",
-      icon: <XIcon />,
-      url: `https://twitter.com/intent/tweet?url=${encodedUrl}`,
-      className: "bg-black hover:bg-neutral-800",
+      label: "X",
+      color: "bg-black hover:bg-slate-800",
+      href: `https://twitter.com/intent/tweet?text=${shareText}&url=${encodedUrl}`,
+      icon: (
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817-5.966 6.817H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+      ),
     },
     {
-      name: "Facebook",
-      icon: <FacebookIcon />,
-      url: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
-      className: "bg-[#1877F2] hover:bg-[#0d6fe8]",
+      label: "Facebook",
+      color: "bg-blue-600 hover:bg-blue-500",
+      href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+      icon: (
+        <path d="M13.5 21v-8h2.7l.4-3h-3.1V8.1c0-.9.3-1.5 1.6-1.5h1.7V4a22 22 0 0 0-2.4-.1c-2.4 0-4 1.5-4 4.1V10H7.7v3H10v8h3.5Z" />
+      ),
     },
     {
-      name: "LinkedIn",
-      icon: <LinkedInIcon />,
-      url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
-      className: "bg-[#0A66C2] hover:bg-[#0959a8]",
+      label: "LinkedIn",
+      color: "bg-[#0A66C2] hover:bg-blue-500",
+      href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
+      icon: (
+        <path d="M6.5 8.2A2 2 0 1 0 6.5 4.2a2 2 0 0 0 0 4ZM4.7 9.8h3.6V20H4.7V9.8Zm5.8 0h3.4v1.4h.1c.5-.9 1.6-1.8 3.4-1.8 3.6 0 4.3 2.4 4.3 5.5V20h-3.6v-4.5c0-1.1 0-2.6-1.6-2.6s-1.9 1.2-1.9 2.5V20h-3.6V9.8Z" />
+      ),
     },
   ];
 
-  const shareByEmail = () => {
-    window.location.href = `mailto:?subject=${encodeURIComponent(
-      "Check out this link",
-    )}&body=${encodedUrl}`;
-  };
+  const rowButton = darkMode
+    ? "border-slate-700 text-slate-300 hover:border-blue-500 hover:bg-slate-800 hover:text-white"
+    : "border-slate-200 text-slate-700 hover:border-blue-400 hover:bg-slate-50 hover:text-slate-950";
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm"
       onClick={onClose}
+      role="presentation"
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl dark:border-neutral-800 dark:bg-neutral-950"
+        className={`w-full max-w-sm rounded-2xl border p-6 shadow-2xl ${
+          darkMode
+            ? "border-slate-700 bg-slate-900 text-white"
+            : "border-slate-200 bg-white text-slate-950"
+        }`}
         onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="share-title"
       >
-        <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-neutral-900 dark:text-white">
+            <h2 id="share-title" className="text-lg font-semibold">
               Share link
             </h2>
-            <p className="mt-1 text-sm text-neutral-500">
-              Share your shortened URL
+            <p className="mt-1 text-sm text-slate-500">
+              Choose where to share your short link
             </p>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-900 dark:hover:text-white"
+            aria-label="Close share dialog"
+            className={`flex h-8 w-8 items-center justify-center rounded-lg text-xl transition ${
+              darkMode
+                ? "text-slate-500 hover:bg-slate-800 hover:text-white"
+                : "text-slate-400 hover:bg-slate-100 hover:text-slate-900"
+            }`}
           >
-            <X className="h-5 w-5" />
+            ×
           </button>
         </div>
 
-        <div className="mb-6 flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-900">
-          <div className="min-w-0 flex-1 truncate text-sm text-neutral-700 dark:text-neutral-300">
-            {url}
-          </div>
-
-          <button
-            type="button"
-            onClick={copyUrl}
-            className="flex shrink-0 items-center gap-2 rounded-lg bg-neutral-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-neutral-700 dark:bg-white dark:text-black dark:hover:bg-neutral-200"
-          >
-            {copied ? (
-              <>
-                <Check className="h-4 w-4" />
-                Copied
-              </>
-            ) : (
-              <>
-                <Copy className="h-4 w-4" />
-                Copy
-              </>
-            )}
-          </button>
+        <div
+          className={`mt-5 truncate rounded-xl border px-4 py-3 text-sm text-blue-500 ${
+            darkMode
+              ? "border-slate-800 bg-slate-950"
+              : "border-slate-200 bg-slate-50"
+          }`}
+        >
+          {url}
         </div>
 
-        <div className="grid grid-cols-4 gap-3">
-          {shareLinks.map((item) => (
+        <div className="mt-6 grid grid-cols-4 gap-3">
+          {options.map((option) => (
             <button
-              key={item.name}
+              key={option.label}
               type="button"
-              onClick={() => {
-                window.open(
-                  item.url,
-                  "_blank",
-                  "noopener,noreferrer,width=700,height=600",
-                );
-              }}
-              className="flex flex-col items-center gap-2"
+              onClick={() => openShare(option.href)}
+              className="group flex flex-col items-center gap-2"
             >
               <span
-                className={`flex h-12 w-12 items-center justify-center rounded-full text-white transition ${item.className}`}
+                className={`flex h-12 w-12 items-center justify-center rounded-xl text-white transition group-hover:-translate-y-0.5 ${option.color}`}
               >
-                {item.icon}
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="h-6 w-6"
+                  aria-hidden="true"
+                >
+                  {option.icon}
+                </svg>
               </span>
-              <span className="text-xs text-neutral-600 dark:text-neutral-400">
-                {item.name}
+
+              <span className="text-xs text-slate-500 transition group-hover:text-blue-500">
+                {option.label}
               </span>
             </button>
           ))}
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-3">
+        <div className="mt-6 space-y-2">
           <button
             type="button"
-            onClick={shareByEmail}
-            className="flex items-center justify-center gap-2 rounded-xl border border-neutral-200 px-4 py-3 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-900"
+            onClick={copyLink}
+            className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition ${rowButton}`}
           >
-            <Mail className="h-4 w-4" />
-            Email
+            <span className="text-base">{copied ? "✓" : "⧉"}</span>
+            {copied ? "Copied" : "Copy link"}
           </button>
 
           <button
             type="button"
-            onClick={shareNative}
-            className="flex items-center justify-center gap-2 rounded-xl border border-neutral-200 px-4 py-3 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-900"
+            onClick={() => {
+              const subject = encodeURIComponent("Check out this link");
+              const body = encodeURIComponent(
+                `I wanted to share this link with you:\n\n${url}`,
+              );
+
+              window.location.href = `mailto:?subject=${subject}&body=${body}`;
+              onClose();
+            }}
+            className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition ${rowButton}`}
           >
-            <Share2 className="h-4 w-4" />
-            More
+            <span className="text-base">✉</span>
+            Share via email
           </button>
+
+          {canNativeShare && (
+            <button
+              type="button"
+              onClick={nativeShare}
+              className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition ${rowButton}`}
+            >
+              <span className="text-base">↗</span>
+              More sharing options
+            </button>
+          )}
         </div>
       </div>
     </div>

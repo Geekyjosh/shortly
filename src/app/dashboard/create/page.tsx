@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { FormEvent, useEffect, useState } from "react";
 import ShareModal from "@/components/ShareModal";
+import { useTheme } from "@/components/ThemeProvider";
 
 export default function CreateLink() {
+  const { darkMode, toggleTheme } = useTheme();
+
   const [url, setUrl] = useState("");
   const [alias, setAlias] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
@@ -14,9 +18,10 @@ export default function CreateLink() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [toast, setToast] = useState("");
   const [shareOpen, setShareOpen] = useState(false);
-  const [shareUrl, setShareUrl] = useState("");
+  const [host, setHost] = useState("short.ly");
 
   useEffect(() => {
+    setHost(window.location.host);
     checkAuth();
   }, []);
 
@@ -87,10 +92,7 @@ export default function CreateLink() {
         return;
       }
 
-      const generatedShortUrl = `${window.location.origin}/${data.shortCode}`;
-
-      setShortUrl(generatedShortUrl);
-      setShareUrl(generatedShortUrl);
+      setShortUrl(`${window.location.origin}/${data.shortCode}`);
 
       setUrl("");
       setAlias("");
@@ -119,17 +121,68 @@ export default function CreateLink() {
   function handleShare() {
     if (!shortUrl) return;
 
-    setShareUrl(shortUrl);
     setShareOpen(true);
   }
 
+  const t = darkMode
+    ? {
+        page: "bg-slate-950 text-white",
+        header: "border-slate-800 bg-slate-950/90",
+        navLink: "text-slate-400 hover:text-white",
+        card: "border-slate-800 bg-slate-900",
+        label: "text-slate-300",
+        muted: "text-slate-400",
+        subtle: "text-slate-500",
+        hint: "text-slate-600",
+        back: "text-slate-500 hover:text-slate-300",
+        input:
+          "border-slate-700 bg-slate-950 text-white placeholder:text-slate-600",
+        inputGroup: "border-slate-700 bg-slate-950",
+        prefix: "border-slate-800 text-slate-600",
+        btn: "border-slate-700 text-slate-300 hover:border-blue-500 hover:text-white",
+        toast: "border-slate-700 bg-slate-900/95 text-white",
+        spinner: "border-slate-700 border-t-blue-500",
+        link: "text-blue-400 hover:text-blue-300",
+        success: "border-emerald-500/20 bg-emerald-500/5",
+        errorBox: "border-red-500/20 bg-red-500/10 text-red-400",
+        themeBtn:
+          "border-slate-800 bg-slate-900 text-yellow-300 hover:border-slate-700 hover:bg-slate-800",
+      }
+    : {
+        page: "bg-slate-50 text-slate-900",
+        header: "border-slate-200 bg-white",
+        navLink: "text-slate-500 hover:text-slate-900",
+        card: "border-slate-200 bg-white",
+        label: "text-slate-700",
+        muted: "text-slate-600",
+        subtle: "text-slate-500",
+        hint: "text-slate-500",
+        back: "text-slate-500 hover:text-slate-800",
+        input:
+          "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400",
+        inputGroup: "border-slate-300 bg-white",
+        prefix: "border-slate-200 text-slate-500",
+        btn: "border-slate-300 text-slate-700 hover:border-blue-500 hover:text-blue-600",
+        toast: "border-slate-200 bg-white text-slate-900",
+        spinner: "border-slate-300 border-t-blue-500",
+        link: "text-blue-600 hover:text-blue-500",
+        success: "border-emerald-300 bg-emerald-50",
+        errorBox: "border-red-300 bg-red-50 text-red-600",
+        themeBtn:
+          "border-slate-200 bg-slate-100 text-slate-700 hover:border-slate-300 hover:bg-slate-200",
+      };
+
   if (checkingAuth) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
+      <main
+        className={`flex min-h-screen items-center justify-center ${t.page}`}
+      >
         <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-blue-500" />
+          <div
+            className={`mx-auto h-8 w-8 animate-spin rounded-full border-2 ${t.spinner}`}
+          />
 
-          <p className="mt-4 text-sm text-slate-500">Loading...</p>
+          <p className={`mt-4 text-sm ${t.subtle}`}>Loading...</p>
         </div>
       </main>
     );
@@ -137,52 +190,72 @@ export default function CreateLink() {
 
   return (
     <>
-      <main className="min-h-screen bg-slate-950 text-white">
+      <main className={`min-h-screen transition-colors duration-300 ${t.page}`}>
         {toast && (
-          <div className="fixed right-6 top-6 z-50 rounded-xl border border-slate-700 bg-slate-900/95 px-5 py-3 text-sm font-medium text-white shadow-2xl backdrop-blur">
-            <span className="mr-2 text-blue-400">✓</span>
+          <div
+            className={`fixed right-6 top-6 z-50 rounded-xl border px-5 py-3 text-sm font-medium shadow-2xl backdrop-blur ${t.toast}`}
+          >
+            <span className="mr-2 text-blue-500">✓</span>
             {toast}
           </div>
         )}
 
-        <header className="border-b border-slate-800 bg-slate-950/90">
+        <header
+          className={`border-b transition-colors duration-300 ${t.header}`}
+        >
           <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-            <Link
-              href="/"
-              className="text-lg font-bold tracking-tight text-blue-400"
-            >
-              Shortly
+            <Link href="/" className="flex items-center gap-2">
+              <Image
+                src="/logo.svg"
+                alt="Shortly logo"
+                width={120}
+                height={50}
+                priority
+              />
             </Link>
 
-            <nav className="flex items-center gap-6">
-              <Link
-                href="/dashboard"
-                className="text-sm text-slate-400 transition hover:text-white"
-              >
-                Dashboard
-              </Link>
+            <div className="flex items-center gap-6">
+              <nav className="flex items-center gap-6">
+                <Link
+                  href="/dashboard"
+                  className={`text-sm transition ${t.navLink}`}
+                >
+                  Dashboard
+                </Link>
 
-              <Link
-                href="/analytics"
-                className="text-sm text-slate-400 transition hover:text-white"
+                <Link
+                  href="/analytics"
+                  className={`text-sm transition ${t.navLink}`}
+                >
+                  Analytics
+                </Link>
+              </nav>
+
+              <button
+                type="button"
+                onClick={toggleTheme}
+                aria-label={
+                  darkMode ? "Switch to light mode" : "Switch to dark mode"
+                }
+                title={
+                  darkMode ? "Switch to light mode" : "Switch to dark mode"
+                }
+                className={`flex h-10 w-10 items-center justify-center rounded-lg border text-base transition ${t.themeBtn}`}
               >
-                Analytics
-              </Link>
-            </nav>
+                {darkMode ? "☀️" : "🌙"}
+              </button>
+            </div>
           </div>
         </header>
 
         <div className="mx-auto flex min-h-[calc(100vh-81px)] max-w-4xl items-center px-6 py-12">
           <div className="w-full">
-            <Link
-              href="/dashboard"
-              className="text-sm text-slate-500 transition hover:text-slate-300"
-            >
+            <Link href="/dashboard" className={`text-sm transition ${t.back}`}>
               ← Back to dashboard
             </Link>
 
             <div className="mb-8 mt-8">
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-400">
+              <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-500">
                 Create link
               </p>
 
@@ -190,18 +263,20 @@ export default function CreateLink() {
                 Create a short link
               </h1>
 
-              <p className="mt-3 max-w-2xl text-slate-400">
+              <p className={`mt-3 max-w-2xl ${t.muted}`}>
                 Turn any long URL into a clean, memorable link you can share
                 anywhere.
               </p>
             </div>
 
-            <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-2xl sm:p-8">
+            <section
+              className={`rounded-2xl border p-6 shadow-2xl transition-colors duration-300 sm:p-8 ${t.card}`}
+            >
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label
                     htmlFor="url"
-                    className="mb-2 block text-sm font-medium text-slate-300"
+                    className={`mb-2 block text-sm font-medium ${t.label}`}
                   >
                     Destination URL
                   </label>
@@ -212,7 +287,7 @@ export default function CreateLink() {
                     value={url}
                     onChange={(event) => setUrl(event.target.value)}
                     placeholder="https://example.com/your-long-url"
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-4 outline-none placeholder:text-slate-600 focus:border-blue-500"
+                    className={`w-full rounded-xl border px-4 py-4 outline-none focus:border-blue-500 ${t.input}`}
                     required
                   />
                 </div>
@@ -220,16 +295,18 @@ export default function CreateLink() {
                 <div>
                   <label
                     htmlFor="alias"
-                    className="mb-2 block text-sm font-medium text-slate-300"
+                    className={`mb-2 block text-sm font-medium ${t.label}`}
                   >
                     Custom alias
                   </label>
 
-                  <div className="flex overflow-hidden rounded-xl border border-slate-700 bg-slate-950 focus-within:border-blue-500">
-                    <span className="flex items-center border-r border-slate-800 px-4 text-sm text-slate-600">
-                      {typeof window !== "undefined"
-                        ? `${window.location.host}/`
-                        : "short.ly/"}
+                  <div
+                    className={`flex overflow-hidden rounded-xl border focus-within:border-blue-500 ${t.inputGroup}`}
+                  >
+                    <span
+                      className={`flex items-center border-r px-4 text-sm ${t.prefix}`}
+                    >
+                      {host}/
                     </span>
 
                     <input
@@ -238,11 +315,15 @@ export default function CreateLink() {
                       value={alias}
                       onChange={(event) => setAlias(event.target.value)}
                       placeholder="my-link"
-                      className="min-w-0 flex-1 bg-transparent px-4 py-4 outline-none placeholder:text-slate-600"
+                      className={`min-w-0 flex-1 bg-transparent px-4 py-4 outline-none ${
+                        darkMode
+                          ? "text-white placeholder:text-slate-600"
+                          : "text-slate-900 placeholder:text-slate-400"
+                      }`}
                     />
                   </div>
 
-                  <p className="mt-2 text-xs text-slate-600">
+                  <p className={`mt-2 text-xs ${t.hint}`}>
                     Letters, numbers, hyphens and underscores are supported.
                   </p>
                 </div>
@@ -250,7 +331,7 @@ export default function CreateLink() {
                 <div>
                   <label
                     htmlFor="expiresAt"
-                    className="mb-2 block text-sm font-medium text-slate-300"
+                    className={`mb-2 block text-sm font-medium ${t.label}`}
                   >
                     Expiration
                   </label>
@@ -261,17 +342,20 @@ export default function CreateLink() {
                     value={expiresAt}
                     min={getMinimumExpiration()}
                     onChange={(event) => setExpiresAt(event.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-4 text-slate-300 outline-none focus:border-blue-500"
+                    style={{ colorScheme: darkMode ? "dark" : "light" }}
+                    className={`w-full rounded-xl border px-4 py-4 outline-none focus:border-blue-500 ${t.input}`}
                   />
 
-                  <p className="mt-2 text-xs text-slate-600">
+                  <p className={`mt-2 text-xs ${t.hint}`}>
                     Leave empty if you want the link to remain active
                     indefinitely.
                   </p>
                 </div>
 
                 {error && (
-                  <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                  <div
+                    className={`rounded-xl border px-4 py-3 text-sm ${t.errorBox}`}
+                  >
                     {error}
                   </div>
                 )}
@@ -279,15 +363,15 @@ export default function CreateLink() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full rounded-xl bg-blue-600 px-6 py-4 font-medium transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-xl bg-blue-600 px-6 py-4 font-medium text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loading ? "Creating short link..." : "Create short link"}
                 </button>
               </form>
 
               {shortUrl && (
-                <div className="mt-8 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-5">
-                  <p className="text-sm text-slate-400">
+                <div className={`mt-8 rounded-xl border p-5 ${t.success}`}>
+                  <p className={`text-sm ${t.muted}`}>
                     Your short link is ready
                   </p>
 
@@ -295,7 +379,7 @@ export default function CreateLink() {
                     href={shortUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-2 block break-all text-lg font-semibold text-blue-400 transition hover:text-blue-300"
+                    className={`mt-2 block break-all text-lg font-semibold transition ${t.link}`}
                   >
                     {shortUrl}
                   </a>
@@ -304,7 +388,7 @@ export default function CreateLink() {
                     <button
                       type="button"
                       onClick={handleCopy}
-                      className="rounded-lg border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-300 transition hover:border-blue-500 hover:text-white"
+                      className={`rounded-lg border px-5 py-2.5 text-sm font-medium transition ${t.btn}`}
                     >
                       Copy link
                     </button>
@@ -319,7 +403,7 @@ export default function CreateLink() {
 
                     <Link
                       href="/dashboard"
-                      className="rounded-lg border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-300 transition hover:border-blue-500 hover:text-white"
+                      className={`rounded-lg border px-5 py-2.5 text-sm font-medium transition ${t.btn}`}
                     >
                       View dashboard
                     </Link>
@@ -332,7 +416,7 @@ export default function CreateLink() {
       </main>
 
       <ShareModal
-        url={shareUrl}
+        url={shortUrl}
         open={shareOpen}
         onClose={() => setShareOpen(false)}
       />

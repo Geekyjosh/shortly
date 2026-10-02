@@ -13,6 +13,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useTheme } from "@/components/ThemeProvider";
 
 type Click = {
   id: number;
@@ -134,6 +135,7 @@ function getCountryFlag(code: string) {
 
 export default function AnalyticsPage() {
   const router = useRouter();
+  const { darkMode, toggleTheme } = useTheme();
 
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -283,13 +285,71 @@ export default function AnalyticsPage() {
     }
   }
 
+  const t = darkMode
+    ? {
+        page: "bg-slate-950 text-white",
+        card: "border-slate-800 bg-slate-900",
+        inner: "border-slate-800 bg-slate-950",
+        dashed: "border-slate-800 bg-slate-950",
+        muted: "text-slate-400",
+        subtle: "text-slate-500",
+        hint: "text-slate-600",
+        strong: "text-white",
+        body: "text-slate-300",
+        bodyAlt: "text-slate-200",
+        link: "text-blue-400",
+        track: "bg-slate-800",
+        thead: "border-slate-800 text-slate-500",
+        row: "border-slate-800",
+        btn: "border-slate-700 text-slate-300 hover:border-blue-500 hover:text-white",
+        spinner: "border-slate-700 border-t-blue-500",
+        themeBtn:
+          "border-slate-800 bg-slate-900 text-yellow-300 hover:border-slate-700 hover:bg-slate-800",
+        chartGrid: "#1e293b",
+        chartAxis: "#64748b",
+        chartLine: "#60a5fa",
+        tooltipBg: "#0f172a",
+        tooltipBorder: "#334155",
+        tooltipText: "#ffffff",
+      }
+    : {
+        page: "bg-slate-50 text-slate-900",
+        card: "border-slate-200 bg-white",
+        inner: "border-slate-200 bg-slate-50",
+        dashed: "border-slate-300 bg-slate-50",
+        muted: "text-slate-600",
+        subtle: "text-slate-500",
+        hint: "text-slate-500",
+        strong: "text-slate-900",
+        body: "text-slate-700",
+        bodyAlt: "text-slate-800",
+        link: "text-blue-600",
+        track: "bg-slate-200",
+        thead: "border-slate-200 text-slate-500",
+        row: "border-slate-200",
+        btn: "border-slate-300 text-slate-700 hover:border-blue-500 hover:text-blue-600",
+        spinner: "border-slate-300 border-t-blue-500",
+        themeBtn:
+          "border-slate-200 bg-slate-100 text-slate-700 hover:border-slate-300 hover:bg-slate-200",
+        chartGrid: "#e2e8f0",
+        chartAxis: "#94a3b8",
+        chartLine: "#2563eb",
+        tooltipBg: "#ffffff",
+        tooltipBorder: "#cbd5e1",
+        tooltipText: "#0f172a",
+      };
+
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
+      <main
+        className={`flex min-h-screen items-center justify-center ${t.page}`}
+      >
         <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-blue-500" />
+          <div
+            className={`mx-auto h-8 w-8 animate-spin rounded-full border-2 ${t.spinner}`}
+          />
 
-          <p className="mt-4 text-sm text-slate-500">Loading analytics...</p>
+          <p className={`mt-4 text-sm ${t.subtle}`}>Loading analytics...</p>
         </div>
       </main>
     );
@@ -297,17 +357,21 @@ export default function AnalyticsPage() {
 
   if (error || !analytics) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 px-6 text-white">
-        <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900 p-8 text-center">
+      <main
+        className={`flex min-h-screen items-center justify-center px-6 ${t.page}`}
+      >
+        <div
+          className={`w-full max-w-md rounded-2xl border p-8 text-center ${t.card}`}
+        >
           <h1 className="text-xl font-semibold">Unable to load analytics</h1>
 
-          <p className="mt-3 text-sm text-red-400">
+          <p className="mt-3 text-sm text-red-500">
             {error || "Something went wrong."}
           </p>
 
           <Link
             href="/dashboard"
-            className="mt-6 inline-flex rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium transition hover:bg-blue-500"
+            className="mt-6 inline-flex rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-blue-500"
           >
             Back to dashboard
           </Link>
@@ -317,7 +381,9 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
+    <main
+      className={`min-h-screen px-6 py-10 transition-colors duration-300 ${t.page}`}
+    >
       <div className="mx-auto max-w-7xl">
         <header className="mb-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div>
@@ -325,14 +391,14 @@ export default function AnalyticsPage() {
               <Image
                 src="/logo.svg"
                 alt="Shortly logo"
-                width={140}
-                height={40}
+                width={120}
+                height={32}
                 priority
                 className="h-10 w-auto"
               />
             </Link>
 
-            <p className="mt-6 text-sm font-medium uppercase tracking-[0.2em] text-blue-400">
+            <p className="mt-6 text-sm font-medium uppercase tracking-[0.2em] text-blue-500">
               Performance
             </p>
 
@@ -340,66 +406,74 @@ export default function AnalyticsPage() {
               Analytics
             </h1>
 
-            <p className="mt-3 text-slate-400">
+            <p className={`mt-3 ${t.muted}`}>
               Understand how your shortened links are performing.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/dashboard"
-              className="rounded-lg border border-slate-700 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:border-blue-500 hover:text-white"
+              className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition ${t.btn}`}
             >
               Dashboard
             </Link>
 
             <Link
               href="/dashboard/create"
-              className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium transition hover:bg-blue-500"
+              className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500"
             >
               Create link
             </Link>
+
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={
+                darkMode ? "Switch to light mode" : "Switch to dark mode"
+              }
+              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+              className={`flex h-10 w-10 items-center justify-center rounded-lg border text-base transition ${t.themeBtn}`}
+            >
+              {darkMode ? "☀️" : "🌙"}
+            </button>
           </div>
         </header>
 
         <section className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-            <p className="text-sm text-slate-400">Total links</p>
+          {[
+            { label: "Total links", value: analytics.totalLinks },
+            { label: "Total clicks", value: analytics.totalClicks },
+            { label: "Active links", value: activeLinks },
+            { label: "Avg. clicks / link", value: averageClicks },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className={`rounded-2xl border p-6 transition-colors duration-300 ${t.card}`}
+            >
+              <p className={`text-sm ${t.muted}`}>{stat.label}</p>
 
-            <p className="mt-3 text-3xl font-bold">{analytics.totalLinks}</p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-            <p className="text-sm text-slate-400">Total clicks</p>
-
-            <p className="mt-3 text-3xl font-bold">{analytics.totalClicks}</p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-            <p className="text-sm text-slate-400">Active links</p>
-
-            <p className="mt-3 text-3xl font-bold">{activeLinks}</p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-            <p className="text-sm text-slate-400">Avg. clicks / link</p>
-
-            <p className="mt-3 text-3xl font-bold">{averageClicks}</p>
-          </div>
+              <p className="mt-3 text-3xl font-bold">{stat.value}</p>
+            </div>
+          ))}
         </section>
 
-        <section className="mb-8 rounded-2xl border border-slate-800 bg-slate-900 p-6">
+        <section
+          className={`mb-8 rounded-2xl border p-6 transition-colors duration-300 ${t.card}`}
+        >
           <div className="mb-6">
             <h2 className="text-xl font-semibold">Click activity</h2>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p className={`mt-1 text-sm ${t.subtle}`}>
               Daily click activity across your links.
             </p>
           </div>
 
           {clicksOverTime.length === 0 ? (
-            <div className="flex h-80 items-center justify-center rounded-xl border border-dashed border-slate-800 bg-slate-950">
-              <p className="text-sm text-slate-500">
+            <div
+              className={`flex h-80 items-center justify-center rounded-xl border border-dashed ${t.dashed}`}
+            >
+              <p className={`text-sm ${t.subtle}`}>
                 No click data available yet.
               </p>
             </div>
@@ -415,11 +489,11 @@ export default function AnalyticsPage() {
                     bottom: 0,
                   }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} />
 
                   <XAxis
                     dataKey="date"
-                    stroke="#64748b"
+                    stroke={t.chartAxis}
                     tick={{
                       fontSize: 12,
                     }}
@@ -427,7 +501,7 @@ export default function AnalyticsPage() {
 
                   <YAxis
                     allowDecimals={false}
-                    stroke="#64748b"
+                    stroke={t.chartAxis}
                     tick={{
                       fontSize: 12,
                     }}
@@ -435,18 +509,19 @@ export default function AnalyticsPage() {
 
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "#0f172a",
-                      border: "1px solid #334155",
+                      backgroundColor: t.tooltipBg,
+                      border: `1px solid ${t.tooltipBorder}`,
                       borderRadius: "8px",
-                      color: "#fff",
+                      color: t.tooltipText,
                     }}
+                    labelStyle={{ color: t.tooltipText }}
                     formatter={(value) => [value, "Clicks"]}
                   />
 
                   <Line
                     type="monotone"
                     dataKey="clicks"
-                    stroke="#60a5fa"
+                    stroke={t.chartLine}
                     strokeWidth={3}
                     dot={{ r: 4 }}
                     activeDot={{ r: 6 }}
@@ -458,17 +533,21 @@ export default function AnalyticsPage() {
         </section>
 
         <div className="mb-8 grid gap-8 lg:grid-cols-2">
-          <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+          <section
+            className={`rounded-2xl border p-6 transition-colors duration-300 ${t.card}`}
+          >
             <h2 className="text-xl font-semibold">Geographic analytics</h2>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p className={`mt-1 text-sm ${t.subtle}`}>
               See where your shortened links are being clicked around the world.
             </p>
 
             <div className="mt-6 space-y-3">
               {countryStats.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-800 bg-slate-950 p-8 text-center">
-                  <p className="text-sm text-slate-500">
+                <div
+                  className={`rounded-xl border border-dashed p-8 text-center ${t.dashed}`}
+                >
+                  <p className={`text-sm ${t.subtle}`}>
                     No geographic data available yet.
                   </p>
                 </div>
@@ -481,7 +560,7 @@ export default function AnalyticsPage() {
                   return (
                     <div
                       key={country}
-                      className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+                      className={`rounded-xl border p-4 ${t.inner}`}
                     >
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex min-w-0 items-center gap-3">
@@ -489,23 +568,25 @@ export default function AnalyticsPage() {
                             {getCountryFlag(country)}
                           </span>
 
-                          <span className="truncate text-sm font-medium text-slate-200">
+                          <span
+                            className={`truncate text-sm font-medium ${t.bodyAlt}`}
+                          >
                             {getCountryName(country)}
                           </span>
                         </div>
 
                         <div className="shrink-0 text-right">
-                          <p className="text-sm font-semibold text-white">
+                          <p className={`text-sm font-semibold ${t.strong}`}>
                             {clicks}
                           </p>
 
-                          <p className="text-xs text-slate-500">
-                            {percentage}%
-                          </p>
+                          <p className={`text-xs ${t.subtle}`}>{percentage}%</p>
                         </div>
                       </div>
 
-                      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-800">
+                      <div
+                        className={`mt-3 h-1.5 overflow-hidden rounded-full ${t.track}`}
+                      >
                         <div
                           className="h-full rounded-full bg-blue-500"
                           style={{
@@ -520,34 +601,38 @@ export default function AnalyticsPage() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+          <section
+            className={`rounded-2xl border p-6 transition-colors duration-300 ${t.card}`}
+          >
             <h2 className="text-xl font-semibold">Top links</h2>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p className={`mt-1 text-sm ${t.subtle}`}>
               Your most clicked shortened URLs.
             </p>
 
             <div className="mt-6 space-y-4">
               {topLinks.length === 0 ? (
-                <p className="text-sm text-slate-500">No links yet.</p>
+                <p className={`text-sm ${t.subtle}`}>No links yet.</p>
               ) : (
                 topLinks.map((link) => (
                   <div
                     key={link.id}
-                    className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+                    className={`rounded-xl border p-4 ${t.inner}`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <p className="truncate font-medium text-blue-400">
+                        <p className={`truncate font-medium ${t.link}`}>
                           /{link.shortCode}
                         </p>
 
-                        <p className="mt-1 truncate text-xs text-slate-600">
+                        <p className={`mt-1 truncate text-xs ${t.hint}`}>
                           {link.originalUrl}
                         </p>
                       </div>
 
-                      <span className="shrink-0 text-sm font-semibold text-white">
+                      <span
+                        className={`shrink-0 text-sm font-semibold ${t.strong}`}
+                      >
                         {link.clicks} clicks
                       </span>
                     </div>
@@ -559,27 +644,29 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="mb-8 grid gap-8 lg:grid-cols-2">
-          <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+          <section
+            className={`rounded-2xl border p-6 transition-colors duration-300 ${t.card}`}
+          >
             <h2 className="text-xl font-semibold">Traffic sources</h2>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p className={`mt-1 text-sm ${t.subtle}`}>
               Where your visitors are coming from.
             </p>
 
             <div className="mt-6 space-y-4">
               {referrerStats.length === 0 ? (
-                <p className="text-sm text-slate-500">No referrer data yet.</p>
+                <p className={`text-sm ${t.subtle}`}>No referrer data yet.</p>
               ) : (
                 referrerStats.slice(0, 6).map(([referrer, count]) => (
                   <div
                     key={referrer}
-                    className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950 px-4 py-3"
+                    className={`flex items-center justify-between rounded-xl border px-4 py-3 ${t.inner}`}
                   >
-                    <span className="truncate text-sm text-slate-300">
+                    <span className={`truncate text-sm ${t.body}`}>
                       {referrer}
                     </span>
 
-                    <span className="ml-4 text-sm font-semibold text-white">
+                    <span className={`ml-4 text-sm font-semibold ${t.strong}`}>
                       {count}
                     </span>
                   </div>
@@ -588,27 +675,29 @@ export default function AnalyticsPage() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+          <section
+            className={`rounded-2xl border p-6 transition-colors duration-300 ${t.card}`}
+          >
             <h2 className="text-xl font-semibold">Browsers</h2>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p className={`mt-1 text-sm ${t.subtle}`}>
               Browsers used to access your links.
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               {browserStats.length === 0 ? (
-                <p className="text-sm text-slate-500">No browser data yet.</p>
+                <p className={`text-sm ${t.subtle}`}>No browser data yet.</p>
               ) : (
                 browserStats.map(([browser, count]) => (
                   <div
                     key={browser}
-                    className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+                    className={`rounded-xl border p-4 ${t.inner}`}
                   >
-                    <p className="text-sm text-slate-400">{browser}</p>
+                    <p className={`text-sm ${t.muted}`}>{browser}</p>
 
                     <p className="mt-2 text-2xl font-bold">{count}</p>
 
-                    <p className="mt-1 text-xs text-slate-600">clicks</p>
+                    <p className={`mt-1 text-xs ${t.hint}`}>clicks</p>
                   </div>
                 ))
               )}
@@ -616,23 +705,29 @@ export default function AnalyticsPage() {
           </section>
         </div>
 
-        <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+        <section
+          className={`rounded-2xl border p-6 transition-colors duration-300 ${t.card}`}
+        >
           <div className="mb-6">
             <h2 className="text-xl font-semibold">Recent clicks</h2>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p className={`mt-1 text-sm ${t.subtle}`}>
               Recent visitor activity across your links.
             </p>
           </div>
 
           {analytics.clicks.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-800 bg-slate-950 p-10 text-center">
-              <p className="text-sm text-slate-500">No clicks recorded yet.</p>
+            <div
+              className={`rounded-xl border border-dashed p-10 text-center ${t.dashed}`}
+            >
+              <p className={`text-sm ${t.subtle}`}>No clicks recorded yet.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[800px] text-left">
-                <thead className="border-b border-slate-800 text-xs uppercase tracking-wider text-slate-500">
+                <thead
+                  className={`border-b text-xs uppercase tracking-wider ${t.thead}`}
+                >
                   <tr>
                     <th className="px-4 py-3">Short URL</th>
 
@@ -650,13 +745,13 @@ export default function AnalyticsPage() {
                   {analytics.clicks.slice(0, 50).map((click) => (
                     <tr
                       key={click.id}
-                      className="border-b border-slate-800 last:border-0"
+                      className={`border-b last:border-0 ${t.row}`}
                     >
-                      <td className="px-4 py-4 font-medium text-blue-400">
+                      <td className={`px-4 py-4 font-medium ${t.link}`}>
                         /{click.shortCode}
                       </td>
 
-                      <td className="px-4 py-4 text-slate-300">
+                      <td className={`px-4 py-4 ${t.body}`}>
                         <span className="mr-2">
                           {getCountryFlag(click.country || "Unknown")}
                         </span>
@@ -664,15 +759,15 @@ export default function AnalyticsPage() {
                         {getCountryName(click.country || "Unknown")}
                       </td>
 
-                      <td className="px-4 py-4 text-slate-300">
+                      <td className={`px-4 py-4 ${t.body}`}>
                         {getBrowser(click.userAgent)}
                       </td>
 
-                      <td className="max-w-xs truncate px-4 py-4 text-slate-400">
+                      <td className={`max-w-xs truncate px-4 py-4 ${t.muted}`}>
                         {getReferrer(click.referrer)}
                       </td>
 
-                      <td className="px-4 py-4 text-slate-400">
+                      <td className={`px-4 py-4 ${t.muted}`}>
                         {new Date(click.createdAt).toLocaleString()}
                       </td>
                     </tr>

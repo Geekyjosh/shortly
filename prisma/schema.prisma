@@ -30,29 +30,31 @@ model Session {
 }
 
 model Url {
-  id          Int       @id @default(autoincrement())
-  originalUrl String
-  shortCode   String    @unique
-  clicks      Int       @default(0)
-  createdAt   DateTime  @default(now())
-  expiresAt   DateTime?
-  userId      Int?
-  active      Boolean   @default(true)
-  clicksData  Click[]
-  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           Int       @id @default(autoincrement())
+  originalUrl  String
+  shortCode    String    @unique
+  clicks       Int       @default(0)
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime?
+  userId       Int?
+  anonymousId  String?
+  active       Boolean   @default(true)
 
-  @@index([shortCode])
+  clickRecords Click[]
+  user         User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
+  @@index([shortCode])
+  @@index([anonymousId])
 }
 
 model Click {
   id        Int      @id @default(autoincrement())
   urlId     Int
   createdAt DateTime @default(now())
-  country   String?
   referrer  String?
   userAgent String?
-
+  country   String?
   url       Url      @relation(fields: [urlId], references: [id], onDelete: Cascade)
 
   @@index([urlId])

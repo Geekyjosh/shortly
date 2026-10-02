@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { Check, Copy, Mail, Share2, X } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
 
 type UrlItem = {
   id: number;
@@ -497,6 +498,8 @@ function EditModal({ item, onSave, onClose, saving }: EditModalProps) {
 }
 
 export default function Dashboard() {
+  const { darkMode, toggleTheme } = useTheme();
+
   const [urls, setUrls] = useState<UrlItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -734,27 +737,75 @@ export default function Dashboard() {
   const activeLinks = urls.filter((item) => item.active).length;
 
   const shareItem = urls.find((item) => item.id === shareId);
-
+  const t = darkMode
+    ? {
+        page: "bg-slate-950 text-white",
+        header: "border-slate-800 bg-slate-950/90",
+        navLink: "text-slate-400 hover:text-white",
+        navActive: "text-white",
+        card: "border-slate-800 bg-slate-900",
+        divider: "border-slate-800",
+        divide: "divide-slate-800",
+        rowHover: "hover:bg-slate-950/50",
+        muted: "text-slate-400",
+        subtle: "text-slate-500",
+        input:
+          "border-slate-700 bg-slate-950 text-slate-300 placeholder:text-slate-500",
+        btn: "border-slate-700 text-slate-300 hover:border-blue-500 hover:text-white",
+        iconBox: "border-slate-800 bg-slate-950",
+        toast: "border-slate-700 bg-slate-900/95 text-white",
+        spinner: "border-slate-700 border-t-blue-500",
+        link: "text-blue-400 hover:text-blue-300",
+        openOff: "bg-slate-800 text-slate-500",
+        themeBtn:
+          "border-slate-800 bg-slate-900 text-yellow-300 hover:border-slate-700 hover:bg-slate-800",
+      }
+    : {
+        page: "bg-slate-50 text-slate-900",
+        header: "border-slate-200 bg-white",
+        navLink: "text-slate-500 hover:text-slate-900",
+        navActive: "text-slate-900",
+        card: "border-slate-200 bg-white",
+        divider: "border-slate-200",
+        divide: "divide-slate-200",
+        rowHover: "hover:bg-slate-50",
+        muted: "text-slate-600",
+        subtle: "text-slate-500",
+        input:
+          "border-slate-300 bg-white text-slate-800 placeholder:text-slate-400",
+        btn: "border-slate-300 text-slate-700 hover:border-blue-500 hover:text-blue-600",
+        iconBox: "border-slate-200 bg-slate-50",
+        toast: "border-slate-200 bg-white text-slate-900",
+        spinner: "border-slate-300 border-t-blue-500",
+        link: "text-blue-600 hover:text-blue-500",
+        openOff: "bg-slate-200 text-slate-500",
+        themeBtn:
+          "border-slate-200 bg-slate-100 text-slate-700 hover:border-slate-300 hover:bg-slate-200",
+      };
   if (!loggedIn && loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
+      <main
+        className={`flex min-h-screen items-center justify-center ${t.page}`}
+      >
         <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-blue-500" />
-
-          <p className="mt-4 text-sm text-slate-500">Loading dashboard...</p>
+          <div
+            className={`mx-auto h-8 w-8 animate-spin rounded-full border-2 ${t.spinner}`}
+          />
+          <p className={`mt-4 text-sm ${t.subtle}`}>Loading dashboard...</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className={`min-h-screen transition-colors duration-300 ${t.page}`}>
       {toast && (
-        <div className="fixed right-6 top-6 z-[200] rounded-xl border border-slate-700 bg-slate-900/95 px-5 py-3 text-sm font-medium text-white shadow-2xl backdrop-blur">
-          <span className="mr-2 text-blue-400">
+        <div
+          className={`fixed right-6 top-6 z-[200] rounded-xl border px-5 py-3 text-sm font-medium shadow-2xl backdrop-blur ${t.toast}`}
+        >
+          <span className="mr-2 text-blue-500">
             <Check className="inline h-4 w-4" />
           </span>
-
           {toast}
         </div>
       )}
@@ -778,88 +829,99 @@ export default function Dashboard() {
         />
       )}
 
-      <header className="border-b border-slate-800 bg-slate-950/90">
+      <header className={`border-b transition-colors duration-300 ${t.header}`}>
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <Link href="/dashboard" className="flex items-center gap-2">
             <Image
               src="/logo.svg"
               alt="Shortly logo"
               width={120}
-              height={32}
+              height={50}
               priority
             />
           </Link>
 
-          <nav className="flex items-center gap-6">
-            <Link
-              href="/"
-              className="text-sm text-slate-400 transition hover:text-white"
-            >
-              Home
-            </Link>
+          <div className="flex items-center gap-6">
+            <nav className="flex items-center gap-6">
+              <Link href="/" className={`text-sm transition ${t.navLink}`}>
+                Home
+              </Link>
 
-            <Link href="/dashboard" className="text-sm font-medium text-white">
-              Dashboard
-            </Link>
+              <Link
+                href="/dashboard"
+                className={`text-sm font-medium ${t.navActive}`}
+              >
+                Dashboard
+              </Link>
 
-            <Link
-              href="/analytics"
-              className="text-sm text-slate-400 transition hover:text-white"
+              <Link
+                href="/analytics"
+                className={`text-sm transition ${t.navLink}`}
+              >
+                Analytics
+              </Link>
+            </nav>
+
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={
+                darkMode ? "Switch to light mode" : "Switch to dark mode"
+              }
+              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+              className={`flex h-10 w-10 items-center justify-center rounded-lg border text-base transition ${t.themeBtn}`}
             >
-              Analytics
-            </Link>
-          </nav>
+              {darkMode ? "☀️" : "🌙"}
+            </button>
+          </div>
         </div>
       </header>
 
       <div className="mx-auto max-w-7xl px-6 py-10">
         <div className="mb-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="mb-2 text-sm font-medium uppercase tracking-[0.2em] text-blue-400">
+            <p className="mb-2 text-sm font-medium uppercase tracking-[0.2em] text-blue-500">
               Link management
             </p>
-
             <h1 className="text-4xl font-bold tracking-tight">Your links</h1>
-
-            <p className="mt-3 max-w-2xl text-slate-400">
+            <p className={`mt-3 max-w-2xl ${t.muted}`}>
               Create, manage and share all your shortened URLs from one place.
             </p>
           </div>
 
           <Link
             href="/dashboard/create"
-            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium transition hover:bg-blue-500"
+            className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-blue-500"
           >
             Create short link
           </Link>
         </div>
 
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-            <p className="text-sm text-slate-400">Total links</p>
-
-            <p className="mt-3 text-3xl font-bold">{urls.length}</p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-            <p className="text-sm text-slate-400">Total clicks</p>
-
-            <p className="mt-3 text-3xl font-bold">{totalClicks}</p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-            <p className="text-sm text-slate-400">Active links</p>
-
-            <p className="mt-3 text-3xl font-bold">{activeLinks}</p>
-          </div>
+          {[
+            { label: "Total links", value: urls.length },
+            { label: "Total clicks", value: totalClicks },
+            { label: "Active links", value: activeLinks },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className={`rounded-2xl border p-6 transition-colors duration-300 ${t.card}`}
+            >
+              <p className={`text-sm ${t.muted}`}>{stat.label}</p>
+              <p className="mt-3 text-3xl font-bold">{stat.value}</p>
+            </div>
+          ))}
         </div>
 
-        <section className="overflow-visible rounded-2xl border border-slate-800 bg-slate-900">
-          <div className="flex flex-col gap-4 border-b border-slate-800 p-5 md:flex-row md:items-center md:justify-between">
+        <section
+          className={`overflow-visible rounded-2xl border transition-colors duration-300 ${t.card}`}
+        >
+          <div
+            className={`flex flex-col gap-4 border-b p-5 md:flex-row md:items-center md:justify-between ${t.divider}`}
+          >
             <div>
               <h2 className="font-semibold">Short links</h2>
-
-              <p className="mt-1 text-sm text-slate-500">
+              <p className={`mt-1 text-sm ${t.subtle}`}>
                 Manage and share your links.
               </p>
             </div>
@@ -870,13 +932,13 @@ export default function Dashboard() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search links..."
-                className="rounded-lg border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm outline-none placeholder:text-slate-500 focus:border-blue-500"
+                className={`rounded-lg border px-4 py-2.5 text-sm outline-none focus:border-blue-500 ${t.input}`}
               />
 
               <select
                 value={sort}
                 onChange={(event) => setSort(event.target.value)}
-                className="rounded-lg border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-slate-300 outline-none focus:border-blue-500"
+                className={`rounded-lg border px-4 py-2.5 text-sm outline-none focus:border-blue-500 ${t.input}`}
               >
                 <option value="newest">Newest</option>
                 <option value="oldest">Oldest</option>
@@ -887,9 +949,10 @@ export default function Dashboard() {
 
           {loading && (
             <div className="p-12 text-center">
-              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-blue-500" />
-
-              <p className="mt-4 text-sm text-slate-500">
+              <div
+                className={`mx-auto h-8 w-8 animate-spin rounded-full border-2 ${t.spinner}`}
+              />
+              <p className={`mt-4 text-sm ${t.subtle}`}>
                 Loading your links...
               </p>
             </div>
@@ -897,12 +960,11 @@ export default function Dashboard() {
 
           {!loading && error && (
             <div className="p-12 text-center">
-              <p className="text-red-400">{error}</p>
-
+              <p className="text-red-500">{error}</p>
               <button
                 type="button"
                 onClick={loadUrls}
-                className="mt-4 rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 transition hover:border-blue-500 hover:text-white"
+                className={`mt-4 rounded-lg border px-4 py-2 text-sm transition ${t.btn}`}
               >
                 Try again
               </button>
@@ -911,7 +973,9 @@ export default function Dashboard() {
 
           {!loading && !error && filteredUrls.length === 0 && (
             <div className="p-12 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-800 bg-slate-950 text-2xl">
+              <div
+                className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border text-2xl ${t.iconBox}`}
+              >
                 🔗
               </div>
 
@@ -919,7 +983,7 @@ export default function Dashboard() {
                 {search ? "No links found" : "No short links yet"}
               </h3>
 
-              <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
+              <p className={`mx-auto mt-2 max-w-md text-sm ${t.subtle}`}>
                 {search
                   ? "Try a different search term."
                   : "Create your first shortened URL and it will appear here."}
@@ -928,7 +992,7 @@ export default function Dashboard() {
               {!search && (
                 <Link
                   href="/dashboard/create"
-                  className="mt-5 inline-flex rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium transition hover:bg-blue-500"
+                  className="mt-5 inline-flex rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500"
                 >
                   Create your first link
                 </Link>
@@ -937,16 +1001,13 @@ export default function Dashboard() {
           )}
 
           {!loading && !error && filteredUrls.length > 0 && (
-            <div className="divide-y divide-slate-800">
+            <div className={`divide-y ${t.divide}`}>
               {filteredUrls.map((item) => {
                 const shortUrl = `${window.location.origin}/${item.shortCode}`;
                 const busy = actionId === item.id;
 
                 return (
-                  <div
-                    key={item.id}
-                    className="p-5 transition hover:bg-slate-950/50"
-                  >
+                  <div key={item.id} className={`p-5 transition ${t.rowHover}`}>
                     <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-3">
@@ -955,9 +1016,7 @@ export default function Dashboard() {
                             target="_blank"
                             rel="noopener noreferrer"
                             className={`font-semibold transition ${
-                              item.active
-                                ? "text-blue-400 hover:text-blue-300"
-                                : "text-slate-500 line-through"
+                              item.active ? t.link : `${t.subtle} line-through`
                             }`}
                           >
                             {window.location.host}/{item.shortCode}
@@ -966,26 +1025,28 @@ export default function Dashboard() {
                           <span
                             className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                               item.active
-                                ? "bg-emerald-500/10 text-emerald-400"
-                                : "bg-red-500/10 text-red-400"
+                                ? "bg-emerald-500/10 text-emerald-500"
+                                : "bg-red-500/10 text-red-500"
                             }`}
                           >
                             {item.active ? "Active" : "Inactive"}
                           </span>
                         </div>
 
-                        <p className="mt-2 max-w-3xl truncate text-sm text-slate-500">
+                        <p
+                          className={`mt-2 max-w-3xl truncate text-sm ${t.subtle}`}
+                        >
                           {item.originalUrl}
                         </p>
 
-                        <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-500">
+                        <div
+                          className={`mt-3 flex flex-wrap gap-4 text-xs ${t.subtle}`}
+                        >
                           <span>{item.clicks} clicks</span>
-
                           <span>
                             Created{" "}
                             {new Date(item.createdAt).toLocaleDateString()}
                           </span>
-
                           {item.expiresAt && (
                             <span>
                               Expires{" "}
@@ -1000,7 +1061,7 @@ export default function Dashboard() {
                           type="button"
                           onClick={() => setEditItem(item)}
                           disabled={busy}
-                          className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-blue-500 hover:text-white disabled:opacity-50"
+                          className={`rounded-lg border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${t.btn}`}
                         >
                           Edit
                         </button>
@@ -1009,7 +1070,7 @@ export default function Dashboard() {
                           type="button"
                           onClick={() => copyLink(item.shortCode)}
                           disabled={busy}
-                          className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-blue-500 hover:text-white disabled:opacity-50"
+                          className={`rounded-lg border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${t.btn}`}
                         >
                           Copy
                         </button>
@@ -1018,7 +1079,7 @@ export default function Dashboard() {
                           type="button"
                           onClick={() => setShareId(item.id)}
                           disabled={busy}
-                          className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-blue-500 hover:text-white disabled:opacity-50"
+                          className={`rounded-lg border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${t.btn}`}
                         >
                           Share
                         </button>
@@ -1027,7 +1088,7 @@ export default function Dashboard() {
                           type="button"
                           onClick={() => toggleStatus(item.id)}
                           disabled={busy}
-                          className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:border-amber-500 hover:text-white disabled:opacity-50"
+                          className={`rounded-lg border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${t.btn}`}
                         >
                           {busy
                             ? "Working..."
@@ -1040,7 +1101,7 @@ export default function Dashboard() {
                           type="button"
                           onClick={() => deleteLink(item.id)}
                           disabled={busy}
-                          className="rounded-lg border border-red-500/30 px-4 py-2 text-sm font-medium text-red-400 transition hover:border-red-500 hover:bg-red-500/10 disabled:opacity-50"
+                          className="rounded-lg border border-red-500/30 px-4 py-2 text-sm font-medium text-red-500 transition hover:border-red-500 hover:bg-red-500/10 disabled:opacity-50"
                         >
                           Delete
                         </button>
@@ -1052,7 +1113,7 @@ export default function Dashboard() {
                           className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
                             item.active
                               ? "bg-blue-600 text-white hover:bg-blue-500"
-                              : "bg-slate-800 text-slate-500"
+                              : t.openOff
                           }`}
                         >
                           Open
