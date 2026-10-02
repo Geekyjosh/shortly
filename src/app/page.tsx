@@ -1174,7 +1174,7 @@ export default function Home() {
           </div>
 
           <div
-            className={`mt-12 flex flex-col gap-3 border-t pt-6 text-sm sm:flex-row sm:items-center sm:justify-between ${
+            className={`mt-12 flex justify-center border-t pt-6 text-center text-sm ${
               darkMode
                 ? "border-slate-900 text-slate-600"
                 : "border-slate-300 text-slate-500"
