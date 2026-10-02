@@ -1180,9 +1180,7 @@ export default function Home() {
                 : "border-slate-300 text-slate-500"
             }`}
           >
-            <p>© 2026 Shortly. All rights reserved.</p>
-
-            <p>Built with Next.js, TypeScript, PostgreSQL & Prisma.</p>
+            <p>© 2026 Shortly. All rights reserved. Built by Nexvius Labs.</p>
           </div>
         </div>
       </footer>
