@@ -78,3 +78,11 @@ shortly/
 ├── package.json
 └── README.md
 ```
+
+## Copyright
+
+© 2026 Nexvius Labs. All rights reserved.
+
+Shortly is a proprietary URL management and analytics platform developed by Nexvius Labs.
+
+The source code is provided for viewing and demonstration purposes only. No part of this project may be copied, modified, redistributed, republished, or used commercially without prior written permission from Nexvius Labs.
