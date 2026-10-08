@@ -1,29 +1,67 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
-import { FormEvent, useEffect, useState } from "react";
+import {
+  ArrowLeft,
+  BarChart3,
+  Check,
+  Clock3,
+  Copy,
+  Link2,
+  Plus,
+  Share2,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+import { FormEvent, useEffect, useState, useSyncExternalStore } from "react";
 import ShareModal from "@/components/ShareModal";
-import { useTheme } from "@/components/ThemeProvider";
+import SiteFooter from "@/components/layout/SiteFooter";
+import SiteHeader from "@/components/layout/SiteHeader";
 
-export default function CreateLink() {
-  const { darkMode, toggleTheme } = useTheme();
+function subscribeToLocation() {
+  return () => {};
+}
+
+function getHostSnapshot() {
+  return window.location.host;
+}
+
+function getServerHostSnapshot() {
+  return "shortly.app";
+}
+
+function getOriginSnapshot() {
+  return window.location.origin;
+}
+
+function getServerOriginSnapshot() {
+  return "https://shortly.app";
+}
+
+export default function CreateLinkPage() {
+  const host = useSyncExternalStore(
+    subscribeToLocation,
+    getHostSnapshot,
+    getServerHostSnapshot,
+  );
+
+  const origin = useSyncExternalStore(
+    subscribeToLocation,
+    getOriginSnapshot,
+    getServerOriginSnapshot,
+  );
 
   const [url, setUrl] = useState("");
   const [alias, setAlias] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
-  const [shortUrl, setShortUrl] = useState("");
+  const [shortCode, setShortCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
   const [toast, setToast] = useState("");
   const [shareOpen, setShareOpen] = useState(false);
-  const [host, setHost] = useState("short.ly");
+  const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    setHost(window.location.host);
-    checkAuth();
-  }, []);
+  const shortUrl = shortCode ? `${origin}/${shortCode}` : "";
 
   useEffect(() => {
     if (!toast) return;
@@ -35,40 +73,13 @@ export default function CreateLink() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  async function checkAuth() {
-    try {
-      const response = await fetch("/api/auth/me");
-      const data = await response.json();
-
-      if (!data.authenticated) {
-        window.location.href = "/login";
-        return;
-      }
-
-      setCheckingAuth(false);
-    } catch {
-      window.location.href = "/login";
-    }
-  }
-
-  function getMinimumExpiration() {
-    const date = new Date(Date.now() + 5 * 60 * 1000);
-
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  }
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setError("");
-    setShortUrl("");
+    setShortCode("");
     setShareOpen(false);
+    setCopied(false);
     setLoading(true);
 
     try {
@@ -87,17 +98,17 @@ export default function CreateLink() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "Unable to create short link.");
-        setToast(data.error || "Unable to create short link.");
+        const message = data.error || "Unable to create short link.";
+
+        setError(message);
+        setToast(message);
         return;
       }
 
-      setShortUrl(`${window.location.origin}/${data.shortCode}`);
-
+      setShortCode(data.shortCode);
       setUrl("");
       setAlias("");
       setExpiresAt("");
-
       setToast("Short link created successfully.");
     } catch {
       setError("Something went wrong. Please try again.");
@@ -112,171 +123,158 @@ export default function CreateLink() {
 
     try {
       await navigator.clipboard.writeText(shortUrl);
+      setCopied(true);
       setToast("Link copied to clipboard.");
+
+      setTimeout(() => {
+        setCopied(false);
+      }, 2000);
     } catch {
       setToast("Unable to copy link.");
     }
   }
 
-  function handleShare() {
-    if (!shortUrl) return;
-
-    setShareOpen(true);
-  }
-
-  const t = darkMode
-    ? {
-        page: "bg-slate-950 text-white",
-        header: "border-slate-800 bg-slate-950/90",
-        navLink: "text-slate-400 hover:text-white",
-        card: "border-slate-800 bg-slate-900",
-        label: "text-slate-300",
-        muted: "text-slate-400",
-        subtle: "text-slate-500",
-        hint: "text-slate-600",
-        back: "text-slate-500 hover:text-slate-300",
-        input:
-          "border-slate-700 bg-slate-950 text-white placeholder:text-slate-600",
-        inputGroup: "border-slate-700 bg-slate-950",
-        prefix: "border-slate-800 text-slate-600",
-        btn: "border-slate-700 text-slate-300 hover:border-blue-500 hover:text-white",
-        toast: "border-slate-700 bg-slate-900/95 text-white",
-        spinner: "border-slate-700 border-t-blue-500",
-        link: "text-blue-400 hover:text-blue-300",
-        success: "border-emerald-500/20 bg-emerald-500/5",
-        errorBox: "border-red-500/20 bg-red-500/10 text-red-400",
-        themeBtn:
-          "border-slate-800 bg-slate-900 text-yellow-300 hover:border-slate-700 hover:bg-slate-800",
-      }
-    : {
-        page: "bg-slate-50 text-slate-900",
-        header: "border-slate-200 bg-white",
-        navLink: "text-slate-500 hover:text-slate-900",
-        card: "border-slate-200 bg-white",
-        label: "text-slate-700",
-        muted: "text-slate-600",
-        subtle: "text-slate-500",
-        hint: "text-slate-500",
-        back: "text-slate-500 hover:text-slate-800",
-        input:
-          "border-slate-300 bg-white text-slate-900 placeholder:text-slate-400",
-        inputGroup: "border-slate-300 bg-white",
-        prefix: "border-slate-200 text-slate-500",
-        btn: "border-slate-300 text-slate-700 hover:border-blue-500 hover:text-blue-600",
-        toast: "border-slate-200 bg-white text-slate-900",
-        spinner: "border-slate-300 border-t-blue-500",
-        link: "text-blue-600 hover:text-blue-500",
-        success: "border-emerald-300 bg-emerald-50",
-        errorBox: "border-red-300 bg-red-50 text-red-600",
-        themeBtn:
-          "border-slate-200 bg-slate-100 text-slate-700 hover:border-slate-300 hover:bg-slate-200",
-      };
-
-  if (checkingAuth) {
-    return (
-      <main
-        className={`flex min-h-screen items-center justify-center ${t.page}`}
-      >
-        <div className="text-center">
-          <div
-            className={`mx-auto h-8 w-8 animate-spin rounded-full border-2 ${t.spinner}`}
-          />
-
-          <p className={`mt-4 text-sm ${t.subtle}`}>Loading...</p>
-        </div>
-      </main>
-    );
-  }
-
   return (
-    <>
-      <main className={`min-h-screen transition-colors duration-300 ${t.page}`}>
-        {toast && (
-          <div
-            className={`fixed right-6 top-6 z-50 rounded-xl border px-5 py-3 text-sm font-medium shadow-2xl backdrop-blur ${t.toast}`}
-          >
-            <span className="mr-2 text-blue-500">✓</span>
-            {toast}
-          </div>
-        )}
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+      <SiteHeader />
 
-        <header
-          className={`border-b transition-colors duration-300 ${t.header}`}
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="shortly-rise fixed right-4 top-20 z-[90] flex max-w-sm items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium shadow-xl"
+          style={{
+            borderColor: "var(--border)",
+            background: "var(--surface)",
+          }}
         >
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-            <Link href="/" className="flex items-center gap-2">
-              <Image
-                src="/logo.svg"
-                alt="Shortly logo"
-                width={120}
-                height={50}
-                priority
-              />
-            </Link>
+          <span
+            className="flex h-6 w-6 items-center justify-center rounded-full"
+            style={{
+              background: "var(--brand-soft)",
+              color: "var(--brand)",
+            }}
+          >
+            <Check className="h-3.5 w-3.5" />
+          </span>
 
-            <div className="flex items-center gap-6">
-              <nav className="flex items-center gap-6">
-                <Link
-                  href="/dashboard"
-                  className={`text-sm transition ${t.navLink}`}
-                >
-                  Dashboard
-                </Link>
+          {toast}
+        </div>
+      )}
 
-                <Link
-                  href="/analytics"
-                  className={`text-sm transition ${t.navLink}`}
-                >
-                  Analytics
-                </Link>
-              </nav>
+      <ShareModal
+        url={shortUrl}
+        open={shareOpen && Boolean(shortUrl)}
+        onClose={() => setShareOpen(false)}
+      />
 
-              <button
-                type="button"
-                onClick={toggleTheme}
-                aria-label={
-                  darkMode ? "Switch to light mode" : "Switch to dark mode"
-                }
-                title={
-                  darkMode ? "Switch to light mode" : "Switch to dark mode"
-                }
-                className={`flex h-10 w-10 items-center justify-center rounded-lg border text-base transition ${t.themeBtn}`}
-              >
-                {darkMode ? "☀️" : "🌙"}
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <div className="mx-auto flex min-h-[calc(100vh-81px)] max-w-4xl items-center px-6 py-12">
-          <div className="w-full">
-            <Link href="/dashboard" className={`text-sm transition ${t.back}`}>
-              ← Back to dashboard
-            </Link>
-
-            <div className="mb-8 mt-8">
-              <p className="text-sm font-medium uppercase tracking-[0.2em] text-blue-500">
-                Create link
-              </p>
-
-              <h1 className="mt-3 text-4xl font-bold tracking-tight">
-                Create a short link
-              </h1>
-
-              <p className={`mt-3 max-w-2xl ${t.muted}`}>
-                Turn any long URL into a clean, memorable link you can share
-                anywhere.
-              </p>
-            </div>
-
-            <section
-              className={`rounded-2xl border p-6 shadow-2xl transition-colors duration-300 sm:p-8 ${t.card}`}
+      <main>
+        <section className="border-b border-[var(--border)]">
+          <div className="shortly-container py-10 sm:py-12">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 text-sm font-medium shortly-muted transition hover:text-[var(--foreground)]"
             >
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <ArrowLeft className="h-4 w-4" />
+              Back to links
+            </Link>
+
+            <div className="mt-7 flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="shortly-eyebrow">Workspace</p>
+
+                <h1 className="mt-3 text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">
+                  Create a new link
+                </h1>
+
+                <p className="mt-3 max-w-2xl text-base shortly-muted">
+                  Add a destination, choose an optional custom alias, and decide
+                  whether the link should expire.
+                </p>
+              </div>
+
+              <Link
+                href="/analytics"
+                className="shortly-button-secondary w-fit"
+              >
+                <BarChart3 className="h-4 w-4" />
+                View analytics
+              </Link>
+            </div>
+
+            <nav className="mt-9 flex gap-1 overflow-x-auto border-b border-[var(--border)]">
+              <Link
+                href="/dashboard"
+                className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]"
+              >
+                Links
+              </Link>
+              <Link
+                href="/dashboard/bulk"
+                className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]"
+              >
+                Bulk
+              </Link>
+              <Link
+                href="/dashboard/utm"
+                className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]"
+              >
+                UTM Builder
+              </Link>
+              <Link
+                href="/analytics"
+                className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]"
+              >
+                Analytics
+              </Link>
+
+              <Link
+                href="/dashboard/create"
+                className="relative whitespace-nowrap px-4 pb-3 pt-2 text-sm font-semibold"
+              >
+                Create
+                <span className="absolute inset-x-4 bottom-[-1px] h-0.5 bg-blue-500" />
+              </Link>
+            </nav>
+          </div>
+        </section>
+
+        <section className="shortly-container py-8 sm:py-10">
+          <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
+            <section
+              className="overflow-hidden rounded-2xl border"
+              style={{
+                borderColor: "var(--border)",
+                background: "var(--surface)",
+              }}
+            >
+              <div className="border-b border-[var(--border)] p-5 sm:p-6">
+                <div className="flex items-start justify-between gap-5">
+                  <div>
+                    <h2 className="text-lg font-semibold">Link details</h2>
+
+                    <p className="mt-1 text-sm shortly-muted">
+                      Only the destination URL is required.
+                    </p>
+                  </div>
+
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                    style={{
+                      background: "var(--brand-soft)",
+                      color: "var(--brand)",
+                    }}
+                  >
+                    <Link2 className="h-5 w-5" />
+                  </div>
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-6 p-5 sm:p-6">
                 <div>
                   <label
                     htmlFor="url"
-                    className={`mb-2 block text-sm font-medium ${t.label}`}
+                    className="mb-2 block text-sm font-medium"
                   >
                     Destination URL
                   </label>
@@ -287,25 +285,33 @@ export default function CreateLink() {
                     value={url}
                     onChange={(event) => setUrl(event.target.value)}
                     placeholder="https://example.com/your-long-url"
-                    className={`w-full rounded-xl border px-4 py-4 outline-none focus:border-blue-500 ${t.input}`}
+                    autoComplete="url"
+                    className="shortly-input"
                     required
                   />
+
+                  <p className="mt-2 text-xs shortly-subtle">
+                    This is where visitors will be redirected.
+                  </p>
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="alias"
-                    className={`mb-2 block text-sm font-medium ${t.label}`}
-                  >
-                    Custom alias
-                  </label>
+                  <div className="mb-2 flex items-center justify-between gap-4">
+                    <label htmlFor="alias" className="text-sm font-medium">
+                      Custom alias
+                    </label>
+
+                    <span className="text-xs shortly-subtle">Optional</span>
+                  </div>
 
                   <div
-                    className={`flex overflow-hidden rounded-xl border focus-within:border-blue-500 ${t.inputGroup}`}
+                    className="flex min-h-[46px] overflow-hidden rounded-[var(--radius-sm)] border transition focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10"
+                    style={{
+                      borderColor: "var(--border)",
+                      background: "var(--surface)",
+                    }}
                   >
-                    <span
-                      className={`flex items-center border-r px-4 text-sm ${t.prefix}`}
-                    >
+                    <span className="flex items-center border-r border-[var(--border)] bg-[var(--surface-muted)] px-3 text-sm shortly-subtle">
                       {host}/
                     </span>
 
@@ -314,112 +320,209 @@ export default function CreateLink() {
                       type="text"
                       value={alias}
                       onChange={(event) => setAlias(event.target.value)}
-                      placeholder="my-link"
-                      className={`min-w-0 flex-1 bg-transparent px-4 py-4 outline-none ${
-                        darkMode
-                          ? "text-white placeholder:text-slate-600"
-                          : "text-slate-900 placeholder:text-slate-400"
-                      }`}
+                      placeholder="launch"
+                      autoComplete="off"
+                      className="min-w-0 flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-[var(--subtle)]"
                     />
                   </div>
 
-                  <p className={`mt-2 text-xs ${t.hint}`}>
-                    Letters, numbers, hyphens and underscores are supported.
+                  <p className="mt-2 text-xs shortly-subtle">
+                    Use letters, numbers, hyphens or underscores.
                   </p>
                 </div>
 
                 <div>
-                  <label
-                    htmlFor="expiresAt"
-                    className={`mb-2 block text-sm font-medium ${t.label}`}
-                  >
-                    Expiration
-                  </label>
+                  <div className="mb-2 flex items-center justify-between gap-4">
+                    <label htmlFor="expiresAt" className="text-sm font-medium">
+                      Expiration
+                    </label>
+
+                    <span className="text-xs shortly-subtle">Optional</span>
+                  </div>
 
                   <input
                     id="expiresAt"
                     type="datetime-local"
                     value={expiresAt}
-                    min={getMinimumExpiration()}
                     onChange={(event) => setExpiresAt(event.target.value)}
-                    style={{ colorScheme: darkMode ? "dark" : "light" }}
-                    className={`w-full rounded-xl border px-4 py-4 outline-none focus:border-blue-500 ${t.input}`}
+                    className="shortly-input"
                   />
 
-                  <p className={`mt-2 text-xs ${t.hint}`}>
-                    Leave empty if you want the link to remain active
+                  <p className="mt-2 text-xs shortly-subtle">
+                    Leave this empty if the link should remain active
                     indefinitely.
                   </p>
                 </div>
 
                 {error && (
-                  <div
-                    className={`rounded-xl border px-4 py-3 text-sm ${t.errorBox}`}
-                  >
+                  <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-500">
                     {error}
                   </div>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full rounded-xl bg-blue-600 px-6 py-4 font-medium text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {loading ? "Creating short link..." : "Create short link"}
-                </button>
-              </form>
+                <div className="flex flex-col-reverse gap-3 border-t border-[var(--border)] pt-6 sm:flex-row sm:justify-end">
+                  <Link href="/dashboard" className="shortly-button-secondary">
+                    Cancel
+                  </Link>
 
-              {shortUrl && (
-                <div className={`mt-8 rounded-xl border p-5 ${t.success}`}>
-                  <p className={`text-sm ${t.muted}`}>
-                    Your short link is ready
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="shortly-button-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Plus className="h-4 w-4" />
+
+                    {loading ? "Creating..." : "Create short link"}
+                  </button>
+                </div>
+              </form>
+            </section>
+
+            <aside className="space-y-5">
+              {shortUrl ? (
+                <div
+                  className="shortly-rise rounded-2xl border p-5 sm:p-6"
+                  style={{
+                    borderColor: "rgba(59, 130, 246, 0.35)",
+                    background: "var(--surface)",
+                  }}
+                >
+                  <div
+                    className="flex h-10 w-10 items-center justify-center rounded-xl"
+                    style={{
+                      background: "var(--brand-soft)",
+                      color: "var(--brand)",
+                    }}
+                  >
+                    <Check className="h-5 w-5" />
+                  </div>
+
+                  <p className="mt-5 text-xs font-semibold uppercase tracking-[0.12em] text-blue-500">
+                    Link created
                   </p>
+
+                  <h2 className="mt-2 text-xl font-semibold">
+                    Your short link is ready.
+                  </h2>
 
                   <a
                     href={shortUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`mt-2 block break-all text-lg font-semibold transition ${t.link}`}
+                    className="mt-4 block break-all text-sm font-semibold text-blue-500 hover:text-blue-400"
                   >
                     {shortUrl}
                   </a>
 
-                  <div className="mt-5 flex flex-wrap gap-3">
+                  <div className="mt-6 grid gap-2">
                     <button
                       type="button"
                       onClick={handleCopy}
-                      className={`rounded-lg border px-5 py-2.5 text-sm font-medium transition ${t.btn}`}
+                      className="shortly-button-primary w-full"
                     >
-                      Copy link
+                      <Copy className="h-4 w-4" />
+                      {copied ? "Copied" : "Copy link"}
                     </button>
 
                     <button
                       type="button"
-                      onClick={handleShare}
-                      className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500"
+                      onClick={() => setShareOpen(true)}
+                      className="shortly-button-secondary w-full"
                     >
-                      Share
+                      <Share2 className="h-4 w-4" />
+                      Share link
                     </button>
 
                     <Link
                       href="/dashboard"
-                      className={`rounded-lg border px-5 py-2.5 text-sm font-medium transition ${t.btn}`}
+                      className="shortly-button-secondary w-full"
                     >
-                      View dashboard
+                      View all links
                     </Link>
                   </div>
                 </div>
+              ) : (
+                <div
+                  className="rounded-2xl border p-5 sm:p-6"
+                  style={{
+                    borderColor: "var(--border)",
+                    background: "var(--surface)",
+                  }}
+                >
+                  <p className="text-sm font-semibold">Before you create</p>
+
+                  <div className="mt-5 space-y-5">
+                    <InfoItem
+                      icon={Link2}
+                      title="Destination"
+                      description="Paste the full page you want visitors to reach."
+                    />
+
+                    <InfoItem
+                      icon={Sparkles}
+                      title="Alias"
+                      description="Use a memorable name when the link will be shared publicly."
+                    />
+
+                    <InfoItem
+                      icon={Clock3}
+                      title="Expiration"
+                      description="Useful for temporary campaigns, events or time-sensitive links."
+                    />
+
+                    <InfoItem
+                      icon={ShieldCheck}
+                      title="Control"
+                      description="You can edit, disable or delete the link later from your dashboard."
+                    />
+                  </div>
+                </div>
               )}
-            </section>
+
+              <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] p-5">
+                <p className="text-sm font-semibold">Need a simple link?</p>
+
+                <p className="mt-2 text-sm leading-6 shortly-muted">
+                  Leave the alias and expiration empty. Shortly will generate
+                  the short code automatically and keep the link active.
+                </p>
+              </div>
+            </aside>
           </div>
-        </div>
+        </section>
       </main>
 
-      <ShareModal
-        url={shortUrl}
-        open={shareOpen}
-        onClose={() => setShareOpen(false)}
-      />
-    </>
+      <SiteFooter />
+    </div>
+  );
+}
+
+function InfoItem({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: typeof Link2;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div
+        className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+        style={{
+          background: "var(--brand-soft)",
+          color: "var(--brand)",
+        }}
+      >
+        <Icon className="h-4 w-4" />
+      </div>
+
+      <div>
+        <p className="text-sm font-medium">{title}</p>
+
+        <p className="mt-1 text-xs leading-5 shortly-subtle">{description}</p>
+      </div>
+    </div>
   );
 }

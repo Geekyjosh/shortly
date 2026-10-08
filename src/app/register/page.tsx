@@ -1,8 +1,20 @@
 "use client";
 
-import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  ArrowRight,
+  BarChart3,
+  Check,
+  Eye,
+  EyeOff,
+  Link2,
+  QrCode,
+  ShieldCheck,
+} from "lucide-react";
+import { FormEvent, useState } from "react";
+import SiteFooter from "@/components/layout/SiteFooter";
+import SiteHeader from "@/components/layout/SiteHeader";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -36,143 +48,339 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error);
+        setError(
+          data.error ||
+            "Unable to create your account.",
+        );
         return;
       }
 
       router.push("/login");
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(
+        "Something went wrong. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
   }
 
+  const passwordChecks = [
+    {
+      label: "At least 8 characters",
+      valid: password.length >= 8,
+    },
+  ];
+
   return (
-    <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
-      <div className="mx-auto flex min-h-[80vh] max-w-md items-center justify-center">
-        <div className="w-full">
-          <div className="mb-8 text-center">
-            <Link
-              href="/"
-              className="text-sm font-medium uppercase tracking-widest text-blue-400"
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+      <SiteHeader />
+
+      <main className="relative overflow-hidden border-b border-[var(--border)]">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/60 to-transparent" />
+
+        <div className="shortly-container py-10 sm:py-14 lg:py-20">
+          <div className="grid min-h-[720px] overflow-hidden rounded-[28px] border border-[var(--border)] lg:grid-cols-[1fr_.9fr]">
+            <section
+              className="relative hidden overflow-hidden p-10 lg:flex lg:flex-col lg:justify-between xl:p-14"
+              style={{
+                background:
+                  "linear-gradient(145deg, #0f172a 0%, #0b1736 52%, #102554 100%)",
+              }}
             >
-              Shortly
-            </Link>
-
-            <h1 className="mt-4 text-3xl font-bold">Create your account</h1>
-
-            <p className="mt-2 text-slate-400">
-              Start managing your shortened links.
-            </p>
-          </div>
-
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-4 rounded-xl border border-slate-800 bg-slate-900 p-6"
-          >
-            <div>
-              <label className="mb-2 block text-sm text-slate-300">Name</label>
-
-              <input
-                type="text"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Your name"
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 outline-none placeholder:text-slate-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm text-slate-300">Email</label>
-
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@example.com"
-                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 outline-none placeholder:text-slate-500 focus:border-blue-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm text-slate-300">
-                Password
-              </label>
+              <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-blue-500/15 blur-[100px]" />
+              <div className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-blue-500/10 blur-[110px]" />
 
               <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="At least 8 characters"
-                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 pr-12 outline-none placeholder:text-slate-500 focus:border-blue-500"
-                  minLength={8}
-                  required
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-300">
+                  Create your workspace
+                </p>
+
+                <h1 className="mt-5 max-w-lg text-5xl font-semibold leading-[1.02] tracking-[-0.045em] text-white">
+                  Give your links a better home.
+                </h1>
+
+                <p className="mt-6 max-w-md text-base leading-7 text-slate-300">
+                  Create an account to keep your short links organized,
+                  editable and measurable as your library grows.
+                </p>
+              </div>
+
+              <div className="relative grid gap-3">
+                <Feature
+                  icon={Link2}
+                  title="Save every link"
+                  text="Keep your shortened URLs attached to your account."
                 />
 
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((current) => !current)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-white"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className="h-5 w-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M3 3l18 18M10.6 10.6a2 2 0 102.8 2.8M9.9 4.2A10.8 10.8 0 0112 4c5 0 9.3 3.2 11 8a11.8 11.8 0 01-4.1 5.3M6.2 6.2A11.8 11.8 0 003 12c1.7 4.8 6 8 11 8 1.4 0 2.7-.3 3.9-.7"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className="h-5 w-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M2.1 12a10.5 10.5 0 0119.8 0 10.5 10.5 0 01-19.8 0z"
-                      />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  )}
-                </button>
+                <Feature
+                  icon={BarChart3}
+                  title="Track performance"
+                  text="See click activity and link-level analytics."
+                />
+
+                <Feature
+                  icon={QrCode}
+                  title="Share more ways"
+                  text="Use cleaner URLs and QR-ready link workflows."
+                />
               </div>
-            </div>
+            </section>
 
-            {error && <p className="text-sm text-red-400">{error}</p>}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-lg bg-blue-600 px-6 py-3 font-medium transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+            <section
+              className="flex items-center"
+              style={{
+                background: "var(--surface)",
+              }}
             >
-              {loading ? "Creating account..." : "Create account"}
-            </button>
+              <div className="w-full px-6 py-10 sm:px-10 lg:px-12 xl:px-16">
+                <div className="mx-auto max-w-md">
+                  <div className="lg:hidden">
+                    <p className="shortly-eyebrow">
+                      Get started
+                    </p>
+                  </div>
 
-            <p className="text-center text-sm text-slate-400">
-              Already have an account?{" "}
-              <Link href="/login" className="text-blue-400 hover:text-blue-300">
-                Sign in
-              </Link>
-            </p>
-          </form>
+                  <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] sm:text-4xl">
+                    Create your account
+                  </h2>
+
+                  <p className="mt-3 text-sm leading-6 shortly-muted">
+                    Start managing your shortened links from one
+                    workspace.
+                  </p>
+
+                  <form
+                    onSubmit={handleSubmit}
+                    className="mt-8 space-y-5"
+                  >
+                    {error && (
+                      <div
+                        role="alert"
+                        className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-500"
+                      >
+                        {error}
+                      </div>
+                    )}
+
+                    <div>
+                      <div className="mb-2 flex items-center justify-between gap-4">
+                        <label
+                          htmlFor="name"
+                          className="text-sm font-medium"
+                        >
+                          Name
+                        </label>
+
+                        <span className="text-xs shortly-subtle">
+                          Optional
+                        </span>
+                      </div>
+
+                      <input
+                        id="name"
+                        type="text"
+                        value={name}
+                        onChange={(event) =>
+                          setName(event.target.value)
+                        }
+                        placeholder="Your name"
+                        autoComplete="name"
+                        className="shortly-input"
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="email"
+                        className="mb-2 block text-sm font-medium"
+                      >
+                        Email address
+                      </label>
+
+                      <input
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(event) =>
+                          setEmail(event.target.value)
+                        }
+                        placeholder="you@example.com"
+                        autoComplete="email"
+                        className="shortly-input"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="password"
+                        className="mb-2 block text-sm font-medium"
+                      >
+                        Password
+                      </label>
+
+                      <div className="relative">
+                        <input
+                          id="password"
+                          type={
+                            showPassword
+                              ? "text"
+                              : "password"
+                          }
+                          value={password}
+                          onChange={(event) =>
+                            setPassword(
+                              event.target.value,
+                            )
+                          }
+                          placeholder="At least 8 characters"
+                          autoComplete="new-password"
+                          minLength={8}
+                          className="shortly-input pr-12"
+                          required
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowPassword(
+                              (current) =>
+                                !current,
+                            )
+                          }
+                          aria-label={
+                            showPassword
+                              ? "Hide password"
+                              : "Show password"
+                          }
+                          className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg shortly-subtle transition hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+
+                      <div className="mt-3">
+                        {passwordChecks.map(
+                          (check) => (
+                            <div
+                              key={check.label}
+                              className="flex items-center gap-2 text-xs"
+                            >
+                              <span
+                                className={`flex h-4 w-4 items-center justify-center rounded-full ${
+                                  check.valid
+                                    ? "bg-emerald-500/10 text-emerald-500"
+                                    : "bg-[var(--surface-muted)] shortly-subtle"
+                                }`}
+                              >
+                                <Check className="h-2.5 w-2.5" />
+                              </span>
+
+                              <span
+                                className={
+                                  check.valid
+                                    ? "text-emerald-500"
+                                    : "shortly-subtle"
+                                }
+                              >
+                                {check.label}
+                              </span>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="shortly-button-primary w-full disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {loading
+                        ? "Creating account..."
+                        : "Create account"}
+
+                      {!loading && (
+                        <ArrowRight className="h-4 w-4" />
+                      )}
+                    </button>
+                  </form>
+
+                  <p className="mt-5 text-center text-xs leading-5 shortly-subtle">
+                    By creating an account, you agree to our{" "}
+                    <Link
+                      href="/terms"
+                      className="underline underline-offset-2 hover:text-[var(--foreground)]"
+                    >
+                      Terms
+                    </Link>{" "}
+                    and acknowledge our{" "}
+                    <Link
+                      href="/privacy"
+                      className="underline underline-offset-2 hover:text-[var(--foreground)]"
+                    >
+                      Privacy
+                    </Link>{" "}
+                    page.
+                  </p>
+
+                  <div className="mt-7 border-t border-[var(--border)] pt-6">
+                    <p className="text-center text-sm shortly-muted">
+                      Already have an account?{" "}
+                      <Link
+                        href="/login"
+                        className="font-semibold text-blue-500 hover:text-blue-400"
+                      >
+                        Sign in
+                      </Link>
+                    </p>
+                  </div>
+
+                  <div className="mt-6 flex items-center justify-center gap-2 text-xs shortly-subtle">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Your password is stored as a secure hash
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
         </div>
+      </main>
+
+      <SiteFooter />
+    </div>
+  );
+}
+
+function Feature({
+  icon: Icon,
+  title,
+  text,
+}: {
+  icon: typeof Link2;
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-300">
+        <Icon className="h-4 w-4" />
       </div>
-    </main>
+
+      <div>
+        <p className="text-sm font-semibold text-white">
+          {title}
+        </p>
+
+        <p className="mt-1 text-xs leading-5 text-slate-400">
+          {text}
+        </p>
+      </div>
+    </div>
   );
 }

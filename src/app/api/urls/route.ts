@@ -1,8 +1,12 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { randomUUID } from "crypto";
-import { prisma } from "@/lib/prisma";
+import { lookup } from "dns/promises";
+import { isIP } from "net";
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+
+export const runtime = "nodejs";
 
 function generateShortCode(length = 6) {
   const characters =
@@ -57,7 +61,7 @@ function parseExpiration(value: unknown) {
 
   const date = new Date(value);
 
-  if (isNaN(date.getTime())) {
+  if (Number.isNaN(date.getTime())) {
     return undefined;
   }
 
@@ -72,12 +76,309 @@ function isValidAlias(alias: string) {
   return /^[a-zA-Z0-9_-]+$/.test(alias);
 }
 
+function isPrivateIPv4(ip: string) {
+  const parts = ip.split(".").map(Number);
+
+  if (
+    parts.length !== 4 ||
+    parts.some((part) => Number.isNaN(part) || part < 0 || part > 255)
+  ) {
+    return true;
+  }
+
+  const [a, b] = parts;
+
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    a >= 224
+  );
+}
+
+function isPrivateIPv6(ip: string) {
+  const normalized = ip.toLowerCase();
+
+  return (
+    normalized === "::" ||
+    normalized === "::1" ||
+    normalized.startsWith("fc") ||
+    normalized.startsWith("fd") ||
+    normalized.startsWith("fe8") ||
+    normalized.startsWith("fe9") ||
+    normalized.startsWith("fea") ||
+    normalized.startsWith("feb") ||
+    normalized.startsWith("::ffff:127.") ||
+    normalized.startsWith("::ffff:10.") ||
+    normalized.startsWith("::ffff:192.168.")
+  );
+}
+
+function isPrivateIp(ip: string) {
+  const version = isIP(ip);
+
+  if (version === 4) {
+    return isPrivateIPv4(ip);
+  }
+
+  if (version === 6) {
+    return isPrivateIPv6(ip);
+  }
+
+  return true;
+}
+
+async function validatePublicHostname(hostname: string) {
+  const normalizedHostname = hostname.toLowerCase();
+
+  if (
+    normalizedHostname === "localhost" ||
+    normalizedHostname.endsWith(".localhost") ||
+    normalizedHostname.endsWith(".local") ||
+    normalizedHostname.endsWith(".internal") ||
+    normalizedHostname === "0.0.0.0"
+  ) {
+    return false;
+  }
+
+  if (isIP(normalizedHostname)) {
+    return !isPrivateIp(normalizedHostname);
+  }
+
+  try {
+    const addresses = await lookup(normalizedHostname, {
+      all: true,
+      verbatim: true,
+    });
+
+    if (addresses.length === 0) {
+      return false;
+    }
+
+    return addresses.every((address) => !isPrivateIp(address.address));
+  } catch {
+    return false;
+  }
+}
+
+type DestinationValidation =
+  | {
+      valid: true;
+      normalizedUrl: string;
+    }
+  | {
+      valid: false;
+      error: string;
+    };
+
+async function requestDestination(url: URL, method: "HEAD" | "GET") {
+  const controller = new AbortController();
+
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, 8000);
+
+  try {
+    return await fetch(url.toString(), {
+      method,
+      redirect: "manual",
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Shortly-Link-Validator/1.0",
+        Accept:
+          "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+        ...(method === "GET"
+          ? {
+              Range: "bytes=0-0",
+            }
+          : {}),
+      },
+      cache: "no-store",
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function validateDestinationUrl(
+  value: string,
+): Promise<DestinationValidation> {
+  let currentUrl: URL;
+
+  try {
+    currentUrl = new URL(value);
+  } catch {
+    return {
+      valid: false,
+      error: "Please provide a valid URL.",
+    };
+  }
+
+  if (!["http:", "https:"].includes(currentUrl.protocol)) {
+    return {
+      valid: false,
+      error: "Only HTTP and HTTPS URLs are supported.",
+    };
+  }
+
+  if (currentUrl.username || currentUrl.password) {
+    return {
+      valid: false,
+      error: "URLs containing usernames or passwords are not supported.",
+    };
+  }
+
+  const maximumRedirects = 5;
+
+  for (
+    let redirectCount = 0;
+    redirectCount <= maximumRedirects;
+    redirectCount++
+  ) {
+    const publicHostname = await validatePublicHostname(currentUrl.hostname);
+
+    if (!publicHostname) {
+      return {
+        valid: false,
+        error: "This URL cannot be reached or points to a private address.",
+      };
+    }
+
+    let response: Response;
+
+    try {
+      response = await requestDestination(currentUrl, "HEAD");
+
+      /*
+       * Some websites do not support HEAD,
+       * even though the destination exists.
+       */
+      if (response.status === 405 || response.status === 501) {
+        await response.body?.cancel();
+
+        response = await requestDestination(currentUrl, "GET");
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        return {
+          valid: false,
+          error: "The destination website took too long to respond.",
+        };
+      }
+
+      /*
+       * Some hosts behave differently for HEAD,
+       * so make one lightweight GET attempt.
+       */
+      try {
+        response = await requestDestination(currentUrl, "GET");
+      } catch (fallbackError) {
+        if (
+          fallbackError instanceof Error &&
+          fallbackError.name === "AbortError"
+        ) {
+          return {
+            valid: false,
+            error: "The destination website took too long to respond.",
+          };
+        }
+
+        return {
+          valid: false,
+          error: "The destination website could not be reached.",
+        };
+      }
+    }
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+
+      await response.body?.cancel();
+
+      if (!location) {
+        return {
+          valid: false,
+          error: "The destination returned an invalid redirect.",
+        };
+      }
+
+      try {
+        currentUrl = new URL(location, currentUrl);
+      } catch {
+        return {
+          valid: false,
+          error: "The destination returned an invalid redirect.",
+        };
+      }
+
+      if (!["http:", "https:"].includes(currentUrl.protocol)) {
+        return {
+          valid: false,
+          error: "The destination redirects to an unsupported URL.",
+        };
+      }
+
+      continue;
+    }
+
+    await response.body?.cancel();
+
+    if (response.status === 404 || response.status === 410) {
+      return {
+        valid: false,
+        error: "The destination page does not exist.",
+      };
+    }
+
+    /*
+     * 401 and 403 still mean the website exists.
+     * The page may simply require authentication
+     * or block automated requests.
+     */
+    if (response.status === 401 || response.status === 403) {
+      return {
+        valid: true,
+        normalizedUrl: currentUrl.toString(),
+      };
+    }
+
+    if (response.status >= 500) {
+      return {
+        valid: false,
+        error:
+          "The destination website is currently unavailable. Please try again later.",
+      };
+    }
+
+    if (response.status >= 400) {
+      return {
+        valid: false,
+        error: "The destination website rejected the request.",
+      };
+    }
+
+    return {
+      valid: true,
+      normalizedUrl: currentUrl.toString(),
+    };
+  }
+
+  return {
+    valid: false,
+    error: "The destination has too many redirects.",
+  };
+}
+
 /*
 |--------------------------------------------------------------------------
 | GET /api/urls
 |--------------------------------------------------------------------------
-| Returns all links belonging to the currently authenticated user.
 */
+
 export async function GET() {
   try {
     const userId = await getCurrentUserId();
@@ -133,11 +434,8 @@ export async function GET() {
 |--------------------------------------------------------------------------
 | POST /api/urls
 |--------------------------------------------------------------------------
-| Creates a URL for either:
-| - an authenticated user
-| - a guest user with a maximum of 5 links
-|--------------------------------------------------------------------------
 */
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -148,15 +446,8 @@ export async function POST(request: Request) {
 
     const userId = await getCurrentUserId();
 
-    /*
-     * Authenticated users belong to their account.
-     * Guests receive a browser-based anonymous ID.
-     */
     const anonymousId = userId ? null : await getAnonymousId();
 
-    /*
-     * Validate URL before doing database work.
-     */
     if (!url) {
       return NextResponse.json(
         {
@@ -168,18 +459,24 @@ export async function POST(request: Request) {
       );
     }
 
-    try {
-      new URL(url);
-    } catch {
+    /*
+     * First validate that the destination is
+     * both safe for Shortly to request and reachable.
+     */
+    const destinationValidation = await validateDestinationUrl(url);
+
+    if (!destinationValidation.valid) {
       return NextResponse.json(
         {
-          error: "Please provide a valid URL",
+          error: destinationValidation.error,
         },
         {
           status: 400,
         },
       );
     }
+
+    const validatedUrl = destinationValidation.normalizedUrl;
 
     /*
      * Guests can create a maximum of 5 links.
@@ -205,9 +502,6 @@ export async function POST(request: Request) {
       }
     }
 
-    /*
-     * Validate expiration date.
-     */
     const expirationDate = parseExpiration(body.expiresAt);
 
     if (
@@ -225,9 +519,6 @@ export async function POST(request: Request) {
       );
     }
 
-    /*
-     * Generate or validate custom alias.
-     */
     let shortCode = alias;
 
     if (alias) {
@@ -277,12 +568,9 @@ export async function POST(request: Request) {
       shortCode = await generateUniqueShortCode();
     }
 
-    /*
-     * Create the link.
-     */
     const createdUrl = await prisma.url.create({
       data: {
-        originalUrl: url,
+        originalUrl: validatedUrl,
         shortCode,
         clicks: 0,
         active: true,
@@ -302,9 +590,6 @@ export async function POST(request: Request) {
       },
     });
 
-    /*
-     * Return the newly-created link.
-     */
     const response = NextResponse.json(
       {
         message: "URL shortened successfully",
@@ -317,9 +602,6 @@ export async function POST(request: Request) {
       },
     );
 
-    /*
-     * Remember the guest browser for one year.
-     */
     if (!userId && anonymousId) {
       response.cookies.set("shortly_guest_id", anonymousId, {
         httpOnly: true,
@@ -352,9 +634,8 @@ export async function POST(request: Request) {
 |--------------------------------------------------------------------------
 | PUT /api/urls
 |--------------------------------------------------------------------------
-| Updates a link belonging to the authenticated user.
-|--------------------------------------------------------------------------
 */
+
 export async function PUT(request: Request) {
   try {
     const userId = await getCurrentUserId();
@@ -400,12 +681,17 @@ export async function PUT(request: Request) {
       );
     }
 
-    try {
-      new URL(url);
-    } catch {
+    /*
+     * Validate edited destinations too.
+     * Otherwise a valid link could later be
+     * changed to a broken or unsafe destination.
+     */
+    const destinationValidation = await validateDestinationUrl(url);
+
+    if (!destinationValidation.valid) {
       return NextResponse.json(
         {
-          error: "Please provide a valid URL",
+          error: destinationValidation.error,
         },
         {
           status: 400,
@@ -413,9 +699,8 @@ export async function PUT(request: Request) {
       );
     }
 
-    /*
-     * Validate expiration.
-     */
+    const validatedUrl = destinationValidation.normalizedUrl;
+
     const expirationDate = parseExpiration(body.expiresAt);
 
     if (
@@ -433,9 +718,6 @@ export async function PUT(request: Request) {
       );
     }
 
-    /*
-     * Make sure the URL belongs to the current user.
-     */
     const currentUrl = await prisma.url.findFirst({
       where: {
         id,
@@ -460,9 +742,6 @@ export async function PUT(request: Request) {
 
     let shortCode = currentUrl.shortCode;
 
-    /*
-     * Validate a new alias if provided.
-     */
     if (alias) {
       if (!isValidAlias(alias)) {
         return NextResponse.json(
@@ -513,15 +792,12 @@ export async function PUT(request: Request) {
       shortCode = alias;
     }
 
-    /*
-     * Update the link.
-     */
     const updatedUrl = await prisma.url.update({
       where: {
         id,
       },
       data: {
-        originalUrl: url,
+        originalUrl: validatedUrl,
         shortCode,
         expiresAt: expirationDate,
       },
@@ -558,9 +834,8 @@ export async function PUT(request: Request) {
 |--------------------------------------------------------------------------
 | PATCH /api/urls
 |--------------------------------------------------------------------------
-| Toggles the active/inactive status of a user's link.
-|--------------------------------------------------------------------------
 */
+
 export async function PATCH(request: Request) {
   try {
     const userId = await getCurrentUserId();
@@ -657,9 +932,8 @@ export async function PATCH(request: Request) {
 |--------------------------------------------------------------------------
 | DELETE /api/urls
 |--------------------------------------------------------------------------
-| Deletes a link belonging to the authenticated user.
-|--------------------------------------------------------------------------
 */
+
 export async function DELETE(request: Request) {
   try {
     const userId = await getCurrentUserId();
@@ -718,7 +992,7 @@ export async function DELETE(request: Request) {
     });
 
     return NextResponse.json({
-      message: "URL deleted successfully",
+      message: "Link deleted successfully",
       id,
     });
   } catch (error) {

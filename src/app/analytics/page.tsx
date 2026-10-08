@@ -1,9 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  BarChart3,
+  CheckCircle2,
+  ExternalLink,
+  Globe2,
+  Laptop,
+  Link2,
+  MonitorSmartphone,
+  MousePointerClick,
+  Plus,
+  Radio,
+  Smartphone,
+  TrendingUp,
+} from "lucide-react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import {
   CartesianGrid,
   Line,
@@ -13,17 +26,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import SiteFooter from "@/components/layout/SiteFooter";
+import SiteHeader from "@/components/layout/SiteHeader";
 import { useTheme } from "@/components/ThemeProvider";
 
-type Click = {
-  id: number;
-  urlId: number;
-  shortCode: string;
-  createdAt: string;
-  country: string | null;
-  referrer: string | null;
-  userAgent: string | null;
-};
+type DateRange = "7" | "30" | "90" | "all";
 
 type UrlItem = {
   id: number;
@@ -35,17 +42,82 @@ type UrlItem = {
   expiresAt: string | null;
 };
 
+type AnalyticsClick = {
+  id: number;
+  urlId: number;
+  shortCode: string;
+  createdAt: string;
+  country: string | null;
+  referrer: string | null;
+  userAgent: string | null;
+  browser: string;
+  device: string;
+  operatingSystem: string;
+  source: string;
+};
+
+type BreakdownItem = {
+  name: string;
+  clicks: number;
+};
+
 type CountryStat = {
   country: string;
   clicks: number;
 };
 
-type Analytics = {
+type LinkPerformance = {
+  id: number;
+  shortCode: string;
+  originalUrl: string;
+  active: boolean;
+  createdAt: string;
+  totalClicks: number;
+  periodClicks: number;
+};
+
+type SelectedLink = {
+  id: number;
+  shortCode: string;
+  originalUrl: string;
+  active: boolean;
+  createdAt: string;
+  expiresAt: string | null;
+  totalClicks: number;
+};
+
+type AnalyticsResponse = {
+  range: DateRange;
+
+  selectedLink: SelectedLink | null;
+
+  summary: {
+    totalLinks: number;
+    activeLinks: number;
+    inactiveLinks: number;
+    totalClicks: number;
+    periodClicks: number;
+    averageClicksPerLink: number;
+    topLink: LinkPerformance | null;
+  };
+
   totalClicks: number;
   totalLinks: number;
+
   urls: UrlItem[];
-  clicks: Click[];
+  clicks: AnalyticsClick[];
   countries: CountryStat[];
+
+  clicksOverTime: {
+    date: string;
+    clicks: number;
+  }[];
+
+  browsers: BreakdownItem[];
+  devices: BreakdownItem[];
+  operatingSystems: BreakdownItem[];
+  sources: BreakdownItem[];
+  linkPerformance: LinkPerformance[];
 };
 
 const countryNames: Record<string, string> = {
@@ -115,6 +187,22 @@ const countryNames: Record<string, string> = {
   ZW: "Zimbabwe",
 };
 
+function subscribeToLocation(callback: () => void) {
+  window.addEventListener("popstate", callback);
+
+  return () => {
+    window.removeEventListener("popstate", callback);
+  };
+}
+
+function getSearchSnapshot() {
+  return window.location.search;
+}
+
+function getServerSearchSnapshot() {
+  return "";
+}
+
 function getCountryName(code: string) {
   if (code === "Unknown") {
     return "Unknown";
@@ -133,23 +221,69 @@ function getCountryFlag(code: string) {
   );
 }
 
+function formatChartDate(date: string) {
+  const value = new Date(`${date}T00:00:00`);
+
+  return value.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export default function AnalyticsPage() {
   const router = useRouter();
-  const { darkMode, toggleTheme } = useTheme();
+  const { darkMode } = useTheme();
 
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const search = useSyncExternalStore(
+    subscribeToLocation,
+    getSearchSnapshot,
+    getServerSearchSnapshot,
+  );
+
+  const selectedLinkId = useMemo(() => {
+    const params = new URLSearchParams(search);
+
+    const rawLinkId = params.get("link");
+
+    if (!rawLinkId) {
+      return null;
+    }
+
+    const id = Number(rawLinkId);
+
+    return Number.isInteger(id) && id > 0 ? id : null;
+  }, [search]);
+
+  const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null);
+
   const [loading, setLoading] = useState(true);
+
   const [error, setError] = useState("");
 
+  const [dateRange, setDateRange] = useState<DateRange>("30");
+
   useEffect(() => {
+    let cancelled = false;
+
     async function loadAnalytics() {
+      setLoading(true);
+      setError("");
+
       try {
-        const response = await fetch("/api/analytics", {
+        const params = new URLSearchParams();
+
+        params.set("range", dateRange);
+
+        if (selectedLinkId) {
+          params.set("link", String(selectedLinkId));
+        }
+
+        const response = await fetch(`/api/analytics?${params.toString()}`, {
           cache: "no-store",
         });
 
         if (response.status === 401) {
-          router.push("/login");
+          router.replace("/login");
           return;
         }
 
@@ -159,625 +293,812 @@ export default function AnalyticsPage() {
           throw new Error(data.error || "Unable to load analytics.");
         }
 
-        setAnalytics(data);
+        if (!cancelled) {
+          setAnalytics(data);
+        }
       } catch (error) {
-        setError(
-          error instanceof Error ? error.message : "Unable to load analytics.",
-        );
+        if (!cancelled) {
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load analytics.",
+          );
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     loadAnalytics();
-  }, [router]);
 
-  const clicksOverTime = useMemo(() => {
-    if (!analytics?.clicks.length) {
-      return [];
+    return () => {
+      cancelled = true;
+    };
+  }, [dateRange, router, selectedLinkId]);
+
+  const periodLabel = dateRange === "all" ? "All Time" : `${dateRange} Days`;
+
+  function handleLinkChange(value: string) {
+    if (!value) {
+      router.push("/analytics");
+      return;
     }
 
-    const grouped: Record<string, number> = {};
-
-    analytics.clicks.forEach((click) => {
-      const date = new Date(click.createdAt).toISOString().slice(0, 10);
-
-      grouped[date] = (grouped[date] || 0) + 1;
-    });
-
-    return Object.entries(grouped)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, clicks]) => ({
-        date,
-        clicks,
-      }));
-  }, [analytics]);
-
-  const activeLinks = useMemo(() => {
-    return analytics?.urls.filter((url) => url.active).length || 0;
-  }, [analytics]);
-
-  const averageClicks = useMemo(() => {
-    if (!analytics?.totalLinks) {
-      return 0;
-    }
-
-    return Math.round(analytics.totalClicks / analytics.totalLinks);
-  }, [analytics]);
-
-  const topLinks = useMemo(() => {
-    if (!analytics) {
-      return [];
-    }
-
-    return [...analytics.urls].sort((a, b) => b.clicks - a.clicks).slice(0, 5);
-  }, [analytics]);
-
-  const browserStats = useMemo(() => {
-    const counts: Record<string, number> = {};
-
-    analytics?.clicks.forEach((click) => {
-      const browser = getBrowser(click.userAgent);
-
-      counts[browser] = (counts[browser] || 0) + 1;
-    });
-
-    return Object.entries(counts).sort(([, a], [, b]) => b - a);
-  }, [analytics]);
-
-  const referrerStats = useMemo(() => {
-    const counts: Record<string, number> = {};
-
-    analytics?.clicks.forEach((click) => {
-      const referrer = getReferrer(click.referrer);
-
-      counts[referrer] = (counts[referrer] || 0) + 1;
-    });
-
-    return Object.entries(counts).sort(([, a], [, b]) => b - a);
-  }, [analytics]);
-
-  const countryStats = useMemo(() => {
-    if (!analytics) {
-      return [];
-    }
-
-    return analytics.countries.slice(0, 10);
-  }, [analytics]);
-
-  function getBrowser(userAgent: string | null) {
-    if (!userAgent) {
-      return "Unknown";
-    }
-
-    if (userAgent.includes("Edg")) {
-      return "Edge";
-    }
-
-    if (userAgent.includes("OPR")) {
-      return "Opera";
-    }
-
-    if (userAgent.includes("Chrome")) {
-      return "Chrome";
-    }
-
-    if (userAgent.includes("Firefox")) {
-      return "Firefox";
-    }
-
-    if (userAgent.includes("Safari")) {
-      return "Safari";
-    }
-
-    return "Other";
+    router.push(`/analytics?link=${value}`);
   }
 
-  function getReferrer(referrer: string | null) {
-    if (!referrer) {
-      return "Direct";
-    }
-
-    try {
-      return new URL(referrer).hostname;
-    } catch {
-      return referrer;
-    }
-  }
-
-  const t = darkMode
-    ? {
-        page: "bg-slate-950 text-white",
-        card: "border-slate-800 bg-slate-900",
-        inner: "border-slate-800 bg-slate-950",
-        dashed: "border-slate-800 bg-slate-950",
-        muted: "text-slate-400",
-        subtle: "text-slate-500",
-        hint: "text-slate-600",
-        strong: "text-white",
-        body: "text-slate-300",
-        bodyAlt: "text-slate-200",
-        link: "text-blue-400",
-        track: "bg-slate-800",
-        thead: "border-slate-800 text-slate-500",
-        row: "border-slate-800",
-        btn: "border-slate-700 text-slate-300 hover:border-blue-500 hover:text-white",
-        spinner: "border-slate-700 border-t-blue-500",
-        themeBtn:
-          "border-slate-800 bg-slate-900 text-yellow-300 hover:border-slate-700 hover:bg-slate-800",
-        chartGrid: "#1e293b",
-        chartAxis: "#64748b",
-        chartLine: "#60a5fa",
-        tooltipBg: "#0f172a",
-        tooltipBorder: "#334155",
-        tooltipText: "#ffffff",
-      }
-    : {
-        page: "bg-slate-50 text-slate-900",
-        card: "border-slate-200 bg-white",
-        inner: "border-slate-200 bg-slate-50",
-        dashed: "border-slate-300 bg-slate-50",
-        muted: "text-slate-600",
-        subtle: "text-slate-500",
-        hint: "text-slate-500",
-        strong: "text-slate-900",
-        body: "text-slate-700",
-        bodyAlt: "text-slate-800",
-        link: "text-blue-600",
-        track: "bg-slate-200",
-        thead: "border-slate-200 text-slate-500",
-        row: "border-slate-200",
-        btn: "border-slate-300 text-slate-700 hover:border-blue-500 hover:text-blue-600",
-        spinner: "border-slate-300 border-t-blue-500",
-        themeBtn:
-          "border-slate-200 bg-slate-100 text-slate-700 hover:border-slate-300 hover:bg-slate-200",
-        chartGrid: "#e2e8f0",
-        chartAxis: "#94a3b8",
-        chartLine: "#2563eb",
-        tooltipBg: "#ffffff",
-        tooltipBorder: "#cbd5e1",
-        tooltipText: "#0f172a",
-      };
-
-  if (loading) {
+  if (loading && !analytics) {
     return (
-      <main
-        className={`flex min-h-screen items-center justify-center ${t.page}`}
-      >
-        <div className="text-center">
+      <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+        <SiteHeader />
+
+        <main className="flex min-h-[70vh] items-center justify-center">
+          <div className="text-center">
+            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[var(--border)] border-t-blue-500" />
+
+            <p className="mt-4 text-sm shortly-muted">Loading analytics...</p>
+          </div>
+        </main>
+
+        <SiteFooter />
+      </div>
+    );
+  }
+
+  if (error && !analytics) {
+    return (
+      <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+        <SiteHeader />
+
+        <main className="shortly-container flex min-h-[65vh] items-center justify-center py-12">
           <div
-            className={`mx-auto h-8 w-8 animate-spin rounded-full border-2 ${t.spinner}`}
-          />
+            className="w-full max-w-md rounded-2xl border p-8 text-center"
+            style={{
+              borderColor: "var(--border)",
+              background: "var(--surface)",
+            }}
+          >
+            <h1 className="text-xl font-semibold">Unable to load analytics</h1>
 
-          <p className={`mt-4 text-sm ${t.subtle}`}>Loading analytics...</p>
-        </div>
-      </main>
+            <p className="mt-3 text-sm text-red-500">{error}</p>
+
+            <Link href="/dashboard" className="shortly-button-primary mt-6">
+              Back to links
+            </Link>
+          </div>
+        </main>
+
+        <SiteFooter />
+      </div>
     );
   }
 
-  if (error || !analytics) {
-    return (
-      <main
-        className={`flex min-h-screen items-center justify-center px-6 ${t.page}`}
-      >
-        <div
-          className={`w-full max-w-md rounded-2xl border p-8 text-center ${t.card}`}
-        >
-          <h1 className="text-xl font-semibold">Unable to load analytics</h1>
-
-          <p className="mt-3 text-sm text-red-500">
-            {error || "Something went wrong."}
-          </p>
-
-          <Link
-            href="/dashboard"
-            className="mt-6 inline-flex rounded-lg bg-blue-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-blue-500"
-          >
-            Back to dashboard
-          </Link>
-        </div>
-      </main>
-    );
+  if (!analytics) {
+    return null;
   }
 
   return (
-    <main
-      className={`min-h-screen px-6 py-10 transition-colors duration-300 ${t.page}`}
-    >
-      <div className="mx-auto max-w-7xl">
-        <header className="mb-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-          <div>
-            <Link href="/dashboard" className="flex items-center">
-              <Image
-                src="/logo.svg"
-                alt="Shortly logo"
-                width={120}
-                height={32}
-                priority
-                className="h-10 w-auto"
-              />
-            </Link>
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+      <SiteHeader />
 
-            <p className="mt-6 text-sm font-medium uppercase tracking-[0.2em] text-blue-500">
-              Performance
-            </p>
+      <main>
+        <section className="border-b border-[var(--border)]">
+          <div className="shortly-container py-10 sm:py-12">
+            <div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="shortly-eyebrow">Workspace</p>
 
-            <h1 className="mt-2 text-4xl font-bold tracking-tight">
-              Analytics
-            </h1>
+                <h1 className="mt-3 text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">
+                  Analytics
+                </h1>
 
-            <p className={`mt-3 ${t.muted}`}>
-              Understand how your shortened links are performing.
-            </p>
-          </div>
+                <p className="mt-3 max-w-2xl text-base shortly-muted">
+                  {analytics.selectedLink
+                    ? `Performance for /${analytics.selectedLink.shortCode}.`
+                    : "Understand which links get attention, where clicks come from, and how visitors access them."}
+                </p>
+              </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href="/dashboard"
-              className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition ${t.btn}`}
-            >
-              Dashboard
-            </Link>
-
-            <Link
-              href="/dashboard/create"
-              className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500"
-            >
-              Create link
-            </Link>
-
-            <button
-              type="button"
-              onClick={toggleTheme}
-              aria-label={
-                darkMode ? "Switch to light mode" : "Switch to dark mode"
-              }
-              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-              className={`flex h-10 w-10 items-center justify-center rounded-lg border text-base transition ${t.themeBtn}`}
-            >
-              {darkMode ? "☀️" : "🌙"}
-            </button>
-          </div>
-        </header>
-
-        <section className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            { label: "Total links", value: analytics.totalLinks },
-            { label: "Total clicks", value: analytics.totalClicks },
-            { label: "Active links", value: activeLinks },
-            { label: "Avg. clicks / link", value: averageClicks },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className={`rounded-2xl border p-6 transition-colors duration-300 ${t.card}`}
-            >
-              <p className={`text-sm ${t.muted}`}>{stat.label}</p>
-
-              <p className="mt-3 text-3xl font-bold">{stat.value}</p>
+              <Link
+                href="/dashboard/create"
+                className="shortly-button-primary w-fit"
+              >
+                <Plus className="h-4 w-4" />
+                Create link
+              </Link>
             </div>
-          ))}
+
+            <nav className="mt-9 flex gap-1 overflow-x-auto border-b border-[var(--border)]">
+              <Link
+                href="/dashboard"
+                className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]"
+              >
+                Links
+              </Link>
+              <Link
+                href="/dashboard/bulk"
+                className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]"
+              >
+                Bulk
+              </Link>
+              <Link
+                href="/dashboard/utm"
+                className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]"
+              >
+                UTM Builder
+              </Link>
+              <Link
+                href="/analytics"
+                className="relative whitespace-nowrap px-4 pb-3 pt-2 text-sm font-semibold"
+              >
+                Analytics
+                <span className="absolute inset-x-4 bottom-[-1px] h-0.5 bg-blue-500" />
+              </Link>
+
+              <Link
+                href="/dashboard/create"
+                className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]"
+              >
+                Create
+              </Link>
+            </nav>
+          </div>
         </section>
 
-        <section
-          className={`mb-8 rounded-2xl border p-6 transition-colors duration-300 ${t.card}`}
-        >
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold">Click activity</h2>
-
-            <p className={`mt-1 text-sm ${t.subtle}`}>
-              Daily click activity across your links.
-            </p>
-          </div>
-
-          {clicksOverTime.length === 0 ? (
-            <div
-              className={`flex h-80 items-center justify-center rounded-xl border border-dashed ${t.dashed}`}
+        <section className="shortly-container py-8 sm:py-10">
+          {analytics.selectedLink && (
+            <section
+              className="mb-6 rounded-2xl border p-5 sm:p-6"
+              style={{
+                borderColor: "rgba(59, 130, 246, 0.28)",
+                background: "var(--surface)",
+              }}
             >
-              <p className={`text-sm ${t.subtle}`}>
-                No click data available yet.
-              </p>
-            </div>
-          ) : (
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={clicksOverTime}
-                  margin={{
-                    top: 10,
-                    right: 10,
-                    left: -20,
-                    bottom: 0,
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={t.chartGrid} />
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="shortly-eyebrow">Selected link</span>
 
-                  <XAxis
-                    dataKey="date"
-                    stroke={t.chartAxis}
-                    tick={{
-                      fontSize: 12,
-                    }}
-                  />
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                        analytics.selectedLink.active
+                          ? "bg-emerald-500/10 text-emerald-500"
+                          : "bg-slate-500/10 shortly-muted"
+                      }`}
+                    >
+                      {analytics.selectedLink.active ? "Active" : "Inactive"}
+                    </span>
+                  </div>
 
-                  <YAxis
-                    allowDecimals={false}
-                    stroke={t.chartAxis}
-                    tick={{
-                      fontSize: 12,
-                    }}
-                  />
+                  <h2 className="mt-3 truncate text-xl font-semibold text-blue-500">
+                    /{analytics.selectedLink.shortCode}
+                  </h2>
 
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: t.tooltipBg,
-                      border: `1px solid ${t.tooltipBorder}`,
-                      borderRadius: "8px",
-                      color: t.tooltipText,
-                    }}
-                    labelStyle={{ color: t.tooltipText }}
-                    formatter={(value) => [value, "Clicks"]}
-                  />
-
-                  <Line
-                    type="monotone"
-                    dataKey="clicks"
-                    stroke={t.chartLine}
-                    strokeWidth={3}
-                    dot={{ r: 4 }}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </section>
-
-        <div className="mb-8 grid gap-8 lg:grid-cols-2">
-          <section
-            className={`rounded-2xl border p-6 transition-colors duration-300 ${t.card}`}
-          >
-            <h2 className="text-xl font-semibold">Geographic analytics</h2>
-
-            <p className={`mt-1 text-sm ${t.subtle}`}>
-              See where your shortened links are being clicked around the world.
-            </p>
-
-            <div className="mt-6 space-y-3">
-              {countryStats.length === 0 ? (
-                <div
-                  className={`rounded-xl border border-dashed p-8 text-center ${t.dashed}`}
-                >
-                  <p className={`text-sm ${t.subtle}`}>
-                    No geographic data available yet.
+                  <p
+                    className="mt-2 max-w-2xl truncate text-sm shortly-muted"
+                    title={analytics.selectedLink.originalUrl}
+                  >
+                    {analytics.selectedLink.originalUrl}
                   </p>
                 </div>
-              ) : (
-                countryStats.map(({ country, clicks }) => {
-                  const percentage = analytics.totalClicks
-                    ? Math.round((clicks / analytics.totalClicks) * 100)
-                    : 0;
 
-                  return (
-                    <div
-                      key={country}
-                      className={`rounded-xl border p-4 ${t.inner}`}
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex min-w-0 items-center gap-3">
-                          <span className="text-xl">
-                            {getCountryFlag(country)}
-                          </span>
-
-                          <span
-                            className={`truncate text-sm font-medium ${t.bodyAlt}`}
-                          >
-                            {getCountryName(country)}
-                          </span>
-                        </div>
-
-                        <div className="shrink-0 text-right">
-                          <p className={`text-sm font-semibold ${t.strong}`}>
-                            {clicks}
-                          </p>
-
-                          <p className={`text-xs ${t.subtle}`}>{percentage}%</p>
-                        </div>
-                      </div>
-
-                      <div
-                        className={`mt-3 h-1.5 overflow-hidden rounded-full ${t.track}`}
-                      >
-                        <div
-                          className="h-full rounded-full bg-blue-500"
-                          style={{
-                            width: `${Math.max(percentage, 2)}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </section>
-
-          <section
-            className={`rounded-2xl border p-6 transition-colors duration-300 ${t.card}`}
-          >
-            <h2 className="text-xl font-semibold">Top links</h2>
-
-            <p className={`mt-1 text-sm ${t.subtle}`}>
-              Your most clicked shortened URLs.
-            </p>
-
-            <div className="mt-6 space-y-4">
-              {topLinks.length === 0 ? (
-                <p className={`text-sm ${t.subtle}`}>No links yet.</p>
-              ) : (
-                topLinks.map((link) => (
-                  <div
-                    key={link.id}
-                    className={`rounded-xl border p-4 ${t.inner}`}
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={`/${analytics.selectedLink.shortCode}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shortly-button-secondary"
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className={`truncate font-medium ${t.link}`}>
-                          /{link.shortCode}
-                        </p>
+                    Open link
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
 
-                        <p className={`mt-1 truncate text-xs ${t.hint}`}>
-                          {link.originalUrl}
-                        </p>
-                      </div>
+                  <Link href="/analytics" className="shortly-button-secondary">
+                    View all links
+                  </Link>
+                </div>
+              </div>
+            </section>
+          )}
 
-                      <span
-                        className={`shrink-0 text-sm font-semibold ${t.strong}`}
-                      >
-                        {link.clicks} clicks
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div>
+              <p className="text-sm font-semibold">Performance overview</p>
+
+              <p className="mt-1 text-xs shortly-subtle">{periodLabel}</p>
             </div>
-          </section>
-        </div>
 
-        <div className="mb-8 grid gap-8 lg:grid-cols-2">
-          <section
-            className={`rounded-2xl border p-6 transition-colors duration-300 ${t.card}`}
-          >
-            <h2 className="text-xl font-semibold">Traffic sources</h2>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <select
+                value={analytics.selectedLink?.id ?? ""}
+                onChange={(event) => handleLinkChange(event.target.value)}
+                className="shortly-input sm:w-64"
+                aria-label="Select link"
+              >
+                <option value="">All links</option>
 
-            <p className={`mt-1 text-sm ${t.subtle}`}>
-              Where your visitors are coming from.
-            </p>
+                {analytics.urls.map((url) => (
+                  <option key={url.id} value={url.id}>
+                    /{url.shortCode}
+                  </option>
+                ))}
+              </select>
 
-            <div className="mt-6 space-y-4">
-              {referrerStats.length === 0 ? (
-                <p className={`text-sm ${t.subtle}`}>No referrer data yet.</p>
-              ) : (
-                referrerStats.slice(0, 6).map(([referrer, count]) => (
-                  <div
-                    key={referrer}
-                    className={`flex items-center justify-between rounded-xl border px-4 py-3 ${t.inner}`}
+              <div
+                className="inline-flex w-fit rounded-xl border p-1"
+                style={{
+                  borderColor: "var(--border)",
+                  background: "var(--surface)",
+                }}
+              >
+                {[
+                  ["7", "7 Days"],
+                  ["30", "30 Days"],
+                  ["90", "90 Days"],
+                  ["all", "All Time"],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setDateRange(value as DateRange)}
+                    className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                      dateRange === value
+                        ? "bg-blue-600 text-white"
+                        : "shortly-muted hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
+                    }`}
                   >
-                    <span className={`truncate text-sm ${t.body}`}>
-                      {referrer}
-                    </span>
-
-                    <span className={`ml-4 text-sm font-semibold ${t.strong}`}>
-                      {count}
-                    </span>
-                  </div>
-                ))
-              )}
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </section>
-
-          <section
-            className={`rounded-2xl border p-6 transition-colors duration-300 ${t.card}`}
-          >
-            <h2 className="text-xl font-semibold">Browsers</h2>
-
-            <p className={`mt-1 text-sm ${t.subtle}`}>
-              Browsers used to access your links.
-            </p>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {browserStats.length === 0 ? (
-                <p className={`text-sm ${t.subtle}`}>No browser data yet.</p>
-              ) : (
-                browserStats.map(([browser, count]) => (
-                  <div
-                    key={browser}
-                    className={`rounded-xl border p-4 ${t.inner}`}
-                  >
-                    <p className={`text-sm ${t.muted}`}>{browser}</p>
-
-                    <p className="mt-2 text-2xl font-bold">{count}</p>
-
-                    <p className={`mt-1 text-xs ${t.hint}`}>clicks</p>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
-        </div>
-
-        <section
-          className={`rounded-2xl border p-6 transition-colors duration-300 ${t.card}`}
-        >
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold">Recent clicks</h2>
-
-            <p className={`mt-1 text-sm ${t.subtle}`}>
-              Recent visitor activity across your links.
-            </p>
           </div>
 
-          {analytics.clicks.length === 0 ? (
-            <div
-              className={`rounded-xl border border-dashed p-10 text-center ${t.dashed}`}
-            >
-              <p className={`text-sm ${t.subtle}`}>No clicks recorded yet.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px] text-left">
-                <thead
-                  className={`border-b text-xs uppercase tracking-wider ${t.thead}`}
-                >
-                  <tr>
-                    <th className="px-4 py-3">Short URL</th>
-
-                    <th className="px-4 py-3">Country</th>
-
-                    <th className="px-4 py-3">Browser</th>
-
-                    <th className="px-4 py-3">Referrer</th>
-
-                    <th className="px-4 py-3">Date</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {analytics.clicks.slice(0, 50).map((click) => (
-                    <tr
-                      key={click.id}
-                      className={`border-b last:border-0 ${t.row}`}
-                    >
-                      <td className={`px-4 py-4 font-medium ${t.link}`}>
-                        /{click.shortCode}
-                      </td>
-
-                      <td className={`px-4 py-4 ${t.body}`}>
-                        <span className="mr-2">
-                          {getCountryFlag(click.country || "Unknown")}
-                        </span>
-
-                        {getCountryName(click.country || "Unknown")}
-                      </td>
-
-                      <td className={`px-4 py-4 ${t.body}`}>
-                        {getBrowser(click.userAgent)}
-                      </td>
-
-                      <td className={`max-w-xs truncate px-4 py-4 ${t.muted}`}>
-                        {getReferrer(click.referrer)}
-                      </td>
-
-                      <td className={`px-4 py-4 ${t.muted}`}>
-                        {new Date(click.createdAt).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {loading && (
+            <div className="mt-4 flex items-center gap-2 text-xs shortly-subtle">
+              <div className="h-3 w-3 animate-spin rounded-full border border-[var(--border)] border-t-blue-500" />
+              Updating analytics...
             </div>
           )}
+
+          {error && (
+            <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+              {error}
+            </div>
+          )}
+
+          <div className="mt-5 grid gap-px overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--border)] sm:grid-cols-2 xl:grid-cols-4">
+            <Stat
+              label={analytics.selectedLink ? "Total clicks" : "Total links"}
+              value={
+                analytics.selectedLink
+                  ? analytics.selectedLink.totalClicks.toLocaleString()
+                  : analytics.summary.totalLinks.toLocaleString()
+              }
+              helper={
+                analytics.selectedLink
+                  ? "All-time clicks"
+                  : `${analytics.summary.activeLinks} active`
+              }
+              icon={Link2}
+            />
+
+            <Stat
+              label="Clicks"
+              value={analytics.summary.periodClicks.toLocaleString()}
+              helper={periodLabel}
+              icon={MousePointerClick}
+            />
+
+            <Stat
+              label={analytics.selectedLink ? "Status" : "Active links"}
+              value={
+                analytics.selectedLink
+                  ? analytics.selectedLink.active
+                    ? "Active"
+                    : "Inactive"
+                  : analytics.summary.activeLinks.toLocaleString()
+              }
+              helper={
+                analytics.selectedLink
+                  ? "Current link state"
+                  : "Currently redirecting"
+              }
+              icon={CheckCircle2}
+            />
+
+            <Stat
+              label="Avg. clicks / link"
+              value={analytics.summary.averageClicksPerLink.toLocaleString()}
+              helper={periodLabel}
+              icon={TrendingUp}
+            />
+          </div>
+
+          <section
+            className="mt-8 rounded-2xl border p-5 sm:p-6"
+            style={{
+              borderColor: "var(--border)",
+              background: "var(--surface)",
+            }}
+          >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">Click activity</h2>
+
+                <p className="mt-1 text-sm shortly-muted">
+                  Daily click activity during the selected period.
+                </p>
+              </div>
+
+              <span className="w-fit rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium shortly-muted">
+                {periodLabel}
+              </span>
+            </div>
+
+            {analytics.clicksOverTime.length === 0 ? (
+              <EmptyState text="No click activity for this period." />
+            ) : (
+              <div className="mt-7 h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={analytics.clicksOverTime.map((item) => ({
+                      ...item,
+                      label: formatChartDate(item.date),
+                    }))}
+                    margin={{
+                      top: 8,
+                      right: 8,
+                      left: -22,
+                      bottom: 0,
+                    }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={darkMode ? "#1e293b" : "#e2e8f0"}
+                      vertical={false}
+                    />
+
+                    <XAxis
+                      dataKey="label"
+                      stroke={darkMode ? "#64748b" : "#94a3b8"}
+                      tick={{
+                        fontSize: 11,
+                      }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+
+                    <YAxis
+                      allowDecimals={false}
+                      stroke={darkMode ? "#64748b" : "#94a3b8"}
+                      tick={{
+                        fontSize: 11,
+                      }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: darkMode ? "#0f172a" : "#ffffff",
+                        border: `1px solid ${darkMode ? "#334155" : "#e2e8f0"}`,
+                        borderRadius: "10px",
+                        color: darkMode ? "#ffffff" : "#0f172a",
+                      }}
+                      labelStyle={{
+                        color: darkMode ? "#cbd5e1" : "#475569",
+                      }}
+                    />
+
+                    <Line
+                      type="monotone"
+                      dataKey="clicks"
+                      stroke={darkMode ? "#60a5fa" : "#2563eb"}
+                      strokeWidth={2.5}
+                      dot={false}
+                      activeDot={{
+                        r: 5,
+                      }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </section>
+
+          <div className="mt-8 grid gap-8 xl:grid-cols-[1.15fr_.85fr]">
+            {!analytics.selectedLink && (
+              <section
+                className="rounded-2xl border p-5 sm:p-6"
+                style={{
+                  borderColor: "var(--border)",
+                  background: "var(--surface)",
+                }}
+              >
+                <h2 className="text-lg font-semibold">Top links</h2>
+
+                <p className="mt-1 text-sm shortly-muted">
+                  Best-performing links for {periodLabel.toLowerCase()}.
+                </p>
+
+                <div className="mt-6">
+                  {analytics.linkPerformance.length === 0 ? (
+                    <EmptyState text="No links available yet." />
+                  ) : (
+                    analytics.linkPerformance.slice(0, 5).map((link, index) => (
+                      <div
+                        key={link.id}
+                        className={`flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between ${
+                          index !==
+                          Math.min(analytics.linkPerformance.length, 5) - 1
+                            ? "border-b border-[var(--border)]"
+                            : ""
+                        }`}
+                      >
+                        <div className="flex min-w-0 items-start gap-3">
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-muted)] text-xs font-semibold shortly-subtle">
+                            {index + 1}
+                          </span>
+
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-blue-500">
+                              /{link.shortCode}
+                            </p>
+
+                            <p
+                              className="mt-1 truncate text-xs shortly-subtle"
+                              title={link.originalUrl}
+                            >
+                              {link.originalUrl}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex shrink-0 items-center gap-4">
+                          <div className="text-right">
+                            <p className="text-sm font-semibold">
+                              {link.periodClicks.toLocaleString()}
+                            </p>
+
+                            <p className="mt-1 text-[11px] shortly-subtle">
+                              clicks
+                            </p>
+                          </div>
+
+                          <Link
+                            href={`/analytics?link=${link.id}`}
+                            aria-label={`View analytics for ${link.shortCode}`}
+                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] shortly-muted transition hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Link>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </section>
+            )}
+
+            <section
+              className={`rounded-2xl border p-5 sm:p-6 ${
+                analytics.selectedLink ? "xl:col-span-2" : ""
+              }`}
+              style={{
+                borderColor: "var(--border)",
+                background: "var(--surface)",
+              }}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold">Countries</h2>
+
+                  <p className="mt-1 text-sm shortly-muted">
+                    Where clicks are coming from.
+                  </p>
+                </div>
+
+                <Globe2 className="h-5 w-5 text-blue-500" />
+              </div>
+
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                {analytics.countries.length === 0 ? (
+                  <div className="md:col-span-2">
+                    <EmptyState text="No geographic data for this period." />
+                  </div>
+                ) : (
+                  analytics.countries
+                    .slice(0, 10)
+                    .map(({ country, clicks }) => {
+                      const percentage =
+                        analytics.summary.periodClicks > 0
+                          ? Math.round(
+                              (clicks / analytics.summary.periodClicks) * 100,
+                            )
+                          : 0;
+
+                      return (
+                        <MetricRow
+                          key={country}
+                          label={`${getCountryFlag(country)} ${getCountryName(
+                            country,
+                          )}`}
+                          value={clicks.toLocaleString()}
+                          percentage={percentage}
+                        />
+                      );
+                    })
+                )}
+              </div>
+            </section>
+          </div>
+
+          <div className="mt-8 grid gap-8 lg:grid-cols-2">
+            <BreakdownCard
+              icon={Radio}
+              title="Traffic sources"
+              description="Where visitors arrived from."
+              stats={analytics.sources}
+              total={analytics.summary.periodClicks}
+            />
+
+            <BreakdownCard
+              icon={BarChart3}
+              title="Browsers"
+              description="Browsers used to open your links."
+              stats={analytics.browsers}
+              total={analytics.summary.periodClicks}
+            />
+
+            <BreakdownCard
+              icon={MonitorSmartphone}
+              title="Devices"
+              description="Device types used by visitors."
+              stats={analytics.devices}
+              total={analytics.summary.periodClicks}
+            />
+
+            <BreakdownCard
+              icon={Laptop}
+              title="Operating systems"
+              description="Platforms used to open your links."
+              stats={analytics.operatingSystems}
+              total={analytics.summary.periodClicks}
+            />
+          </div>
+
+          <section
+            className="mt-8 overflow-hidden rounded-2xl border"
+            style={{
+              borderColor: "var(--border)",
+              background: "var(--surface)",
+            }}
+          >
+            <div className="border-b border-[var(--border)] p-5 sm:p-6">
+              <h2 className="text-lg font-semibold">Recent activity</h2>
+
+              <p className="mt-1 text-sm shortly-muted">
+                Latest click events during the selected period.
+              </p>
+            </div>
+
+            {analytics.clicks.length === 0 ? (
+              <div className="p-6">
+                <EmptyState text="No clicks recorded for this period." />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[960px] text-left">
+                  <thead className="border-b border-[var(--border)] bg-[var(--surface-muted)] text-[11px] font-semibold uppercase tracking-[0.08em] shortly-subtle">
+                    <tr>
+                      <th className="px-5 py-3">Short URL</th>
+
+                      <th className="px-5 py-3">Country</th>
+
+                      <th className="px-5 py-3">Device</th>
+
+                      <th className="px-5 py-3">Browser</th>
+
+                      <th className="px-5 py-3">OS</th>
+
+                      <th className="px-5 py-3">Source</th>
+
+                      <th className="px-5 py-3">Date</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-[var(--border)]">
+                    {analytics.clicks.slice(0, 50).map((click) => (
+                      <tr
+                        key={click.id}
+                        className="transition hover:bg-[var(--surface-muted)]"
+                      >
+                        <td className="px-5 py-4 text-sm font-semibold text-blue-500">
+                          /{click.shortCode}
+                        </td>
+
+                        <td className="px-5 py-4 text-sm shortly-muted">
+                          <span className="mr-2">
+                            {getCountryFlag(click.country || "Unknown")}
+                          </span>
+
+                          {getCountryName(click.country || "Unknown")}
+                        </td>
+
+                        <td className="px-5 py-4 text-sm shortly-muted">
+                          {click.device}
+                        </td>
+
+                        <td className="px-5 py-4 text-sm shortly-muted">
+                          {click.browser}
+                        </td>
+
+                        <td className="px-5 py-4 text-sm shortly-muted">
+                          {click.operatingSystem}
+                        </td>
+
+                        <td className="max-w-xs truncate px-5 py-4 text-sm shortly-muted">
+                          {click.source}
+                        </td>
+
+                        <td className="whitespace-nowrap px-5 py-4 text-sm shortly-subtle">
+                          {new Date(click.createdAt).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
         </section>
+      </main>
+
+      <SiteFooter />
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  helper,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  helper: string;
+  icon: typeof Link2;
+}) {
+  return (
+    <div className="bg-[var(--surface)] p-5 sm:p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-sm shortly-muted">{label}</p>
+
+          <p className="mt-3 truncate text-3xl font-semibold tracking-[-0.035em]">
+            {value}
+          </p>
+
+          <p className="mt-2 truncate text-xs shortly-subtle">{helper}</p>
+        </div>
+
+        <div
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+          style={{
+            background: "var(--brand-soft)",
+            color: "var(--brand)",
+          }}
+        >
+          <Icon className="h-4 w-4" />
+        </div>
       </div>
-    </main>
+    </div>
+  );
+}
+
+function MetricRow({
+  label,
+  value,
+  percentage,
+}: {
+  label: string;
+  value: string;
+  percentage: number;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-4">
+        <span className="truncate text-sm shortly-muted">{label}</span>
+
+        <div className="shrink-0 text-right">
+          <span className="text-sm font-semibold">{value}</span>
+
+          <span className="ml-2 text-xs shortly-subtle">{percentage}%</span>
+        </div>
+      </div>
+
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--surface-muted)]">
+        <div
+          className="h-full rounded-full bg-blue-500"
+          style={{
+            width: `${Math.max(percentage, percentage > 0 ? 2 : 0)}%`,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function BreakdownCard({
+  icon: Icon,
+  title,
+  description,
+  stats,
+  total,
+}: {
+  icon:
+    | typeof Radio
+    | typeof BarChart3
+    | typeof MonitorSmartphone
+    | typeof Laptop
+    | typeof Smartphone;
+
+  title: string;
+  description: string;
+  stats: BreakdownItem[];
+  total: number;
+}) {
+  return (
+    <section
+      className="rounded-2xl border p-5 sm:p-6"
+      style={{
+        borderColor: "var(--border)",
+        background: "var(--surface)",
+      }}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold">{title}</h2>
+
+          <p className="mt-1 text-sm shortly-muted">{description}</p>
+        </div>
+
+        <Icon className="h-5 w-5 text-blue-500" />
+      </div>
+
+      <div className="mt-6 space-y-4">
+        {stats.length === 0 ? (
+          <EmptyState
+            text={`No ${title.toLowerCase()} data for this period.`}
+          />
+        ) : (
+          stats.slice(0, 6).map((item) => {
+            const percentage =
+              total > 0 ? Math.round((item.clicks / total) * 100) : 0;
+
+            return (
+              <MetricRow
+                key={item.name}
+                label={item.name}
+                value={item.clicks.toLocaleString()}
+                percentage={percentage}
+              />
+            );
+          })
+        )}
+      </div>
+    </section>
+  );
+}
+
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div className="mt-6 flex min-h-40 items-center justify-center rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface-muted)] px-6 text-center">
+      <p className="text-sm shortly-subtle">{text}</p>
+    </div>
   );
 }

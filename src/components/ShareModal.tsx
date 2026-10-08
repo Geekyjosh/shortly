@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 
 type ShareModalProps = {
@@ -12,26 +12,30 @@ type ShareModalProps = {
 export default function ShareModal({ url, open, onClose }: ShareModalProps) {
   const { darkMode } = useTheme();
   const [copied, setCopied] = useState(false);
-  const [canNativeShare, setCanNativeShare] = useState(false);
+
+  const canNativeShare =
+    typeof navigator !== "undefined" && typeof navigator.share === "function";
+
+  const handleClose = useCallback(() => {
+    setCopied(false);
+    onClose();
+  }, [onClose]);
 
   useEffect(() => {
-    setCanNativeShare(typeof navigator.share === "function");
-  }, []);
-
-  useEffect(() => {
-    if (!open) {
-      setCopied(false);
-      return;
-    }
+    if (!open) return;
 
     function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        handleClose();
+      }
     }
 
     document.addEventListener("keydown", handleEscape);
 
-    return () => document.removeEventListener("keydown", handleEscape);
-  }, [open, onClose]);
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open, handleClose]);
 
   if (!open || !url) return null;
 
@@ -40,25 +44,35 @@ export default function ShareModal({ url, open, onClose }: ShareModalProps) {
 
   function openShare(target: string) {
     window.open(target, "_blank", "noopener,noreferrer,width=700,height=600");
-    onClose();
+    handleClose();
   }
 
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(url);
+
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+
+      setTimeout(() => {
+        setCopied(false);
+      }, 2000);
     } catch {
-      /* clipboard unavailable */
+      setCopied(false);
     }
   }
 
   async function nativeShare() {
+    if (!navigator.share) return;
+
     try {
-      await navigator.share({ title: "Shortly link", url });
-      onClose();
+      await navigator.share({
+        title: "Shortly link",
+        url,
+      });
+
+      handleClose();
     } catch {
-      /* user cancelled */
+      // User cancelled or native sharing failed.
     }
   }
 
@@ -104,7 +118,7 @@ export default function ShareModal({ url, open, onClose }: ShareModalProps) {
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm"
-      onClick={onClose}
+      onClick={handleClose}
       role="presentation"
     >
       <div
@@ -123,6 +137,7 @@ export default function ShareModal({ url, open, onClose }: ShareModalProps) {
             <h2 id="share-title" className="text-lg font-semibold">
               Share link
             </h2>
+
             <p className="mt-1 text-sm text-slate-500">
               Choose where to share your short link
             </p>
@@ -130,7 +145,7 @@ export default function ShareModal({ url, open, onClose }: ShareModalProps) {
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Close share dialog"
             className={`flex h-8 w-8 items-center justify-center rounded-lg text-xl transition ${
               darkMode
@@ -199,7 +214,7 @@ export default function ShareModal({ url, open, onClose }: ShareModalProps) {
               );
 
               window.location.href = `mailto:?subject=${subject}&body=${body}`;
-              onClose();
+              handleClose();
             }}
             className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition ${rowButton}`}
           >

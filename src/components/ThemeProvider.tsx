@@ -4,8 +4,8 @@ import {
   createContext,
   useContext,
   useEffect,
-  useState,
-  ReactNode,
+  useSyncExternalStore,
+  type ReactNode,
 } from "react";
 
 type ThemeContextType = {
@@ -13,34 +13,49 @@ type ThemeContextType = {
   toggleTheme: () => void;
 };
 
+type Theme = "dark" | "light";
+
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const THEME_KEY = "shortly-theme";
+const THEME_EVENT = "shortly-theme-change";
+
+function subscribeToTheme(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener(THEME_EVENT, callback);
+
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener(THEME_EVENT, callback);
+  };
+}
+
+function getThemeSnapshot(): Theme {
+  return localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark";
+}
+
+function getServerThemeSnapshot(): Theme {
+  return "dark";
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [darkMode, setDarkMode] = useState(true);
-  const [mounted, setMounted] = useState(false);
+  const theme = useSyncExternalStore(
+    subscribeToTheme,
+    getThemeSnapshot,
+    getServerThemeSnapshot,
+  );
+
+  const darkMode = theme === "dark";
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("shortly-theme");
-
-    if (savedTheme === "light") {
-      setDarkMode(false);
-    } else {
-      setDarkMode(true);
-    }
-
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-
-    localStorage.setItem("shortly-theme", darkMode ? "dark" : "light");
-
     document.documentElement.classList.toggle("dark", darkMode);
-  }, [darkMode, mounted]);
+  }, [darkMode]);
 
   function toggleTheme() {
-    setDarkMode((current) => !current);
+    const nextTheme: Theme = darkMode ? "light" : "dark";
+
+    localStorage.setItem(THEME_KEY, nextTheme);
+    window.dispatchEvent(new Event(THEME_EVENT));
   }
 
   return (

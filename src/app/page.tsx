@@ -1,10 +1,47 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import {
+  ArrowRight,
+  BarChart3,
+  Check,
+  Copy,
+  Globe2,
+  Link2,
+  MousePointerClick,
+  QrCode,
+  Share2,
+  ShieldCheck,
+  Sparkles,
+  TrendingUp,
+} from "lucide-react";
+import { FormEvent, useEffect, useState, useSyncExternalStore } from "react";
+import ShareModal from "@/components/ShareModal";
+import SiteFooter from "@/components/layout/SiteFooter";
+import SiteHeader from "@/components/layout/SiteHeader";
 import { useTheme } from "@/components/ThemeProvider";
 
+function subscribeToHost() {
+  return () => {};
+}
+
+function getHostSnapshot() {
+  return window.location.host;
+}
+
+function getServerHostSnapshot() {
+  return "shortly.app";
+}
+
 export default function Home() {
+  const { darkMode } = useTheme();
+
+  const host = useSyncExternalStore(
+    subscribeToHost,
+    getHostSnapshot,
+    getServerHostSnapshot,
+  );
+
   const [url, setUrl] = useState("");
   const [alias, setAlias] = useState("");
   const [shortUrl, setShortUrl] = useState("");
@@ -15,46 +52,33 @@ export default function Home() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [toast, setToast] = useState("");
   const [loggedIn, setLoggedIn] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
-  const [loggingOut, setLoggingOut] = useState(false);
-  const [cursor, setCursor] = useState({ x: -500, y: -500 });
-  const [host, setHost] = useState("shortly");
-  const { darkMode, toggleTheme } = useTheme();
 
   useEffect(() => {
-    function handleMouseMove(event: MouseEvent) {
-      setCursor({
-        x: event.clientX,
-        y: event.clientY,
-      });
-    }
+    let cancelled = false;
 
-    window.addEventListener("mousemove", handleMouseMove);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-    };
-  }, []);
-
-  useEffect(() => {
-    setHost(window.location.host);
-  }, []);
-
-  useEffect(() => {
     async function checkAuth() {
       try {
-        const response = await fetch("/api/auth/me");
+        const response = await fetch("/api/auth/me", {
+          cache: "no-store",
+        });
+
         const data = await response.json();
 
-        setLoggedIn(data.authenticated === true);
+        if (!cancelled) {
+          setLoggedIn(data.authenticated === true);
+        }
       } catch {
-        setLoggedIn(false);
-      } finally {
-        setCheckingAuth(false);
+        if (!cancelled) {
+          setLoggedIn(false);
+        }
       }
     }
 
     checkAuth();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -120,6 +144,7 @@ export default function Home() {
 
     try {
       await navigator.clipboard.writeText(shortUrl);
+
       setCopied(true);
       setToast("Link copied to clipboard.");
 
@@ -131,1517 +156,744 @@ export default function Home() {
     }
   }
 
-  function handleShare() {
-    if (!shortUrl) return;
-
-    setShowShareModal(true);
-  }
-
-  async function handleLogout() {
-    setLoggingOut(true);
-
-    try {
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-
-      if (response.ok) {
-        setLoggedIn(false);
-        setToast("Signed out successfully.");
-      } else {
-        setToast("Unable to sign out.");
-      }
-    } catch {
-      setToast("Unable to sign out.");
-    } finally {
-      setLoggingOut(false);
-    }
-  }
-
-  const page = darkMode
-    ? {
-        background: "bg-slate-950",
-        text: "text-white",
-        border: "border-slate-900",
-        card: "bg-slate-900/80",
-        cardSoft: "bg-slate-900/40",
-        input: "bg-slate-950",
-        inputBorder: "border-slate-800",
-        muted: "text-slate-400",
-        subtle: "text-slate-500",
-        faint: "text-slate-600",
-        heading: "text-white",
-      }
-    : {
-        background: "bg-slate-100",
-        text: "text-slate-950",
-        border: "border-slate-300",
-        card: "bg-white",
-        cardSoft: "bg-slate-50",
-        input: "bg-white",
-        inputBorder: "border-slate-300",
-        muted: "text-slate-600",
-        subtle: "text-slate-500",
-        faint: "text-slate-400",
-        heading: "text-slate-950",
-      };
-
   return (
-    <main
-      id="top"
-      className={`relative min-h-screen overflow-hidden ${page.background} ${page.text} transition-colors duration-300`}
-    >
-      {/* Cursor glow */}
-      <div
-        className={`pointer-events-none fixed z-0 h-[420px] w-[420px] rounded-full blur-[110px] transition-transform duration-150 ease-out ${
-          darkMode ? "bg-blue-500/10" : "bg-blue-500/5"
-        }`}
-        style={{
-          transform: `translate3d(${cursor.x - 210}px, ${cursor.y - 210}px, 0)`,
-        }}
-      />
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+      <SiteHeader />
 
-      <div
-        className={`pointer-events-none fixed z-0 h-24 w-24 rounded-full blur-3xl transition-transform duration-75 ease-out ${
-          darkMode ? "bg-blue-400/10" : "bg-blue-400/5"
-        }`}
-        style={{
-          transform: `translate3d(${cursor.x - 48}px, ${cursor.y - 48}px, 0)`,
-        }}
-      />
-
-      {/* Toast */}
       {toast && (
         <div
-          className={`fixed right-5 top-5 z-50 max-w-sm rounded-xl border px-5 py-3 text-sm font-medium shadow-2xl backdrop-blur-xl ${
-            darkMode
-              ? "border-slate-700 bg-slate-900/95 text-white"
-              : "border-slate-300 bg-white/95 text-slate-900"
-          }`}
           role="status"
           aria-live="polite"
+          className="shortly-rise fixed right-4 top-20 z-[80] flex max-w-sm items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium shadow-xl"
+          style={{
+            borderColor: "var(--border)",
+            background: "var(--surface)",
+          }}
         >
-          <span className="mr-2 text-blue-500">✓</span>
+          <span
+            className="flex h-6 w-6 items-center justify-center rounded-full"
+            style={{
+              background: "var(--brand-soft)",
+              color: "var(--brand)",
+            }}
+          >
+            <Check className="h-3.5 w-3.5" />
+          </span>
+
           {toast}
         </div>
       )}
 
-      {/* Share popup */}
-      {showShareModal && shortUrl && (
-        <ShareModal
-          shortUrl={shortUrl}
-          darkMode={darkMode}
-          onClose={() => setShowShareModal(false)}
-          onCopy={async () => {
-            await handleCopy();
-            setShowShareModal(false);
-          }}
-        />
-      )}
+      <ShareModal
+        url={shortUrl}
+        open={showShareModal && Boolean(shortUrl)}
+        onClose={() => setShowShareModal(false)}
+      />
 
-      {/* Navbar */}
-      <header
-        className={`relative z-20 border-b transition-colors duration-300 ${
-          darkMode ? "border-slate-900/80" : "border-slate-300"
-        }`}
-      >
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <Link
-            href="/"
-            className="flex items-center transition-opacity hover:opacity-80"
-          >
-            <img src="/logo.svg" alt="Shortly" className="h-10 w-auto" />
-          </Link>
+      <main>
+        <section className="relative overflow-hidden border-b border-[var(--border)]">
+          <div className="pointer-events-none absolute inset-0">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/60 to-transparent" />
 
-          <nav className="hidden items-center gap-8 md:flex">
-            <a
-              href="#features"
-              className={`text-sm transition ${
-                darkMode
-                  ? "text-slate-400 hover:text-white"
-                  : "text-slate-600 hover:text-slate-950"
-              }`}
-            >
-              Features
-            </a>
-
-            <a
-              href="#use-cases"
-              className={`text-sm transition ${
-                darkMode
-                  ? "text-slate-400 hover:text-white"
-                  : "text-slate-600 hover:text-slate-950"
-              }`}
-            >
-              Use cases
-            </a>
-
-            {loggedIn && (
-              <>
-                <Link
-                  href="/dashboard"
-                  className={`text-sm transition ${
-                    darkMode
-                      ? "text-slate-400 hover:text-white"
-                      : "text-slate-600 hover:text-slate-950"
-                  }`}
-                >
-                  Dashboard
-                </Link>
-
-                <Link
-                  href="/analytics"
-                  className={`text-sm transition ${
-                    darkMode
-                      ? "text-slate-400 hover:text-white"
-                      : "text-slate-600 hover:text-slate-950"
-                  }`}
-                >
-                  Analytics
-                </Link>
-              </>
-            )}
-          </nav>
-
-          <div className="flex items-center gap-3">
-            {!checkingAuth &&
-              (loggedIn ? (
-                <>
-                  <Link
-                    href="/dashboard"
-                    className={`hidden rounded-lg border px-4 py-2 text-sm font-medium transition sm:block ${
-                      darkMode
-                        ? "border-slate-800 text-slate-300 hover:border-slate-700 hover:text-white"
-                        : "border-slate-300 text-slate-700 hover:border-slate-400 hover:text-slate-950"
-                    }`}
-                  >
-                    Dashboard
-                  </Link>
-
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    disabled={loggingOut}
-                    className={`rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-50 ${
-                      darkMode
-                        ? "bg-white text-slate-950 hover:bg-slate-200"
-                        : "bg-slate-950 text-white hover:bg-slate-800"
-                    }`}
-                  >
-                    {loggingOut ? "Signing out..." : "Sign out"}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/login"
-                    className={`hidden px-3 py-2 text-sm font-medium transition sm:block ${
-                      darkMode
-                        ? "text-slate-400 hover:text-white"
-                        : "text-slate-600 hover:text-slate-950"
-                    }`}
-                  >
-                    Log in
-                  </Link>
-
-                  <Link
-                    href="/register"
-                    className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                      darkMode
-                        ? "bg-white text-slate-950 hover:bg-slate-200"
-                        : "bg-slate-950 text-white hover:bg-slate-800"
-                    }`}
-                  >
-                    Get started
-                  </Link>
-                </>
-              ))}
-
-            {/* Theme Toggle (last item) */}
-            <button
-              type="button"
-              onClick={toggleTheme}
-              aria-label={
-                darkMode ? "Switch to light mode" : "Switch to dark mode"
-              }
-              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-              className={`flex h-10 w-10 items-center justify-center rounded-lg border text-base transition ${
-                darkMode
-                  ? "border-slate-800 bg-slate-900 text-yellow-300 hover:border-slate-700 hover:bg-slate-800"
-                  : "border-slate-300 bg-slate-100 text-slate-700 hover:border-slate-400 hover:bg-white"
-              }`}
-            >
-              {darkMode ? "☀️" : "🌙"}
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Hero */}
-      <section className="relative z-10 px-6 pb-24 pt-20 transition-colors duration-300 sm:pt-28">
-        <div className="mx-auto max-w-5xl text-center">
-          <div
-            className={`mb-7 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm ${
-              darkMode
-                ? "border-blue-500/20 bg-blue-500/10 text-blue-300"
-                : "border-blue-300 bg-blue-100 text-blue-700"
-            }`}
-          >
-            <span className="h-2 w-2 rounded-full bg-blue-500" />
-            Smarter links. Simpler sharing.
+            <div className="absolute left-1/2 top-[-320px] h-[620px] w-[920px] -translate-x-1/2 rounded-full bg-blue-500/[0.08] blur-[120px]" />
           </div>
 
-          <h1
-            className={`mx-auto max-w-4xl text-5xl font-bold leading-[1.05] tracking-tight transition-colors duration-300 sm:text-6xl md:text-7xl ${page.heading}`}
-          >
-            Turn long links into{" "}
-            <span className="text-blue-500">smart, shareable URLs.</span>
-          </h1>
-
-          <p
-            className={`mx-auto mt-7 max-w-2xl text-lg leading-8 transition-colors duration-300 sm:text-xl ${page.muted}`}
-          >
-            Create clean short links in seconds, customize them with your own
-            identifiers, and track how they perform from one simple place.
-          </p>
-
-          {/* URL Creator */}
-          <div className="mx-auto mt-12 max-w-4xl">
-            <div
-              className={`rounded-2xl border p-2 shadow-2xl backdrop-blur-xl transition-colors duration-300 sm:p-3 ${
-                darkMode
-                  ? "border-slate-800 bg-slate-900/80 shadow-blue-950/20"
-                  : "border-slate-300 bg-slate-200 shadow-slate-300/50"
-              }`}
-            >
-              <form onSubmit={handleSubmit}>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <input
-                    type="url"
-                    value={url}
-                    onChange={(event) => setUrl(event.target.value)}
-                    placeholder="Paste your long URL here..."
-                    autoComplete="url"
-                    className={`min-w-0 flex-1 rounded-xl border px-5 py-4 text-sm outline-none transition sm:text-base ${
-                      darkMode
-                        ? "border-slate-800 bg-slate-950 text-white placeholder:text-slate-600 focus:border-blue-500"
-                        : "border-slate-300 bg-white text-slate-950 placeholder:text-slate-400 focus:border-blue-500"
-                    }`}
-                    required
-                  />
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="rounded-xl bg-blue-600 px-7 py-4 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50 sm:text-base"
-                  >
-                    {loading ? "Creating..." : "Create short link"}
-                  </button>
+          <div className="shortly-container relative">
+            <div className="grid min-h-[720px] items-center gap-14 py-16 lg:grid-cols-[1.05fr_.95fr] lg:py-24">
+              <div className="shortly-rise">
+                <div
+                  className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
+                  style={{
+                    borderColor: "var(--border)",
+                    background: "var(--surface)",
+                    color: "var(--muted)",
+                  }}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                  Link management without the clutter
                 </div>
 
-                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                  <div
-                    className={`flex flex-1 items-center rounded-xl border px-4 transition ${
-                      darkMode
-                        ? "border-slate-800 bg-slate-950"
-                        : "border-slate-300 bg-slate-50"
-                    }`}
-                  >
-                    <span
-                      className={`mr-2 text-sm ${
-                        darkMode ? "text-slate-600" : "text-slate-400"
-                      }`}
-                    >
-                      {host}/
-                    </span>
+                <h1 className="mt-7 max-w-3xl text-5xl font-semibold leading-[0.98] tracking-[-0.045em] sm:text-6xl lg:text-[72px]">
+                  Short links that tell you more.
+                </h1>
 
-                    <input
-                      type="text"
-                      value={alias}
-                      onChange={(event) => setAlias(event.target.value)}
-                      placeholder="custom-id"
-                      autoComplete="off"
-                      className={`min-w-0 flex-1 bg-transparent py-3 text-sm outline-none ${
-                        darkMode
-                          ? "text-white placeholder:text-slate-600"
-                          : "text-slate-950 placeholder:text-slate-400"
-                      }`}
-                    />
-                  </div>
-                </div>
-
-                {error && (
-                  <p
-                    className={`px-2 pt-3 text-left text-sm ${
-                      darkMode ? "text-red-400" : "text-red-600"
-                    }`}
-                  >
-                    {error}
-                  </p>
-                )}
-              </form>
-            </div>
-
-            <div
-              className={`mt-5 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm transition-colors duration-300 ${page.subtle}`}
-            >
-              <span>✓ Instant creation</span>
-              <span>✓ Custom aliases</span>
-              <span>✓ Click tracking</span>
-              <span>✓ Secure links</span>
-            </div>
-          </div>
-
-          {/* Result */}
-          {shortUrl && (
-            <div className="mx-auto mt-8 max-w-4xl space-y-3">
-              <div
-                className={`rounded-2xl border p-5 text-left backdrop-blur-xl transition-colors duration-300 ${
-                  darkMode
-                    ? "border-blue-500/20 bg-blue-500/5"
-                    : "border-blue-300 bg-blue-50"
-                }`}
-              >
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
-                  Your shortened link
+                <p className="mt-6 max-w-xl text-lg leading-8 shortly-muted">
+                  Create cleaner URLs, share them anywhere, and understand what
+                  happens after every click.
                 </p>
 
-                <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-center">
-                  <a
-                    href={shortUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="min-w-0 flex-1 break-all text-lg font-semibold text-blue-500 transition hover:text-blue-400"
-                  >
-                    {shortUrl}
+                <div className="mt-8 flex flex-wrap items-center gap-3">
+                  <a href="#shorten" className="shortly-button-primary">
+                    Shorten a link
+                    <ArrowRight className="h-4 w-4" />
                   </a>
 
-                  <div className="flex shrink-0 gap-2">
-                    <button
-                      type="button"
-                      onClick={handleCopy}
-                      className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition ${
-                        darkMode
-                          ? "border-slate-700 text-slate-300 hover:border-blue-500 hover:text-white"
-                          : "border-slate-300 text-slate-700 hover:border-blue-500 hover:text-slate-950"
-                      }`}
-                    >
-                      {copied ? "Copied ✓" : "Copy"}
-                    </button>
+                  <Link href="/features" className="shortly-button-secondary">
+                    Explore product
+                  </Link>
+                </div>
 
-                    <button
-                      type="button"
-                      onClick={handleShare}
-                      className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500"
-                    >
-                      Share
-                    </button>
-                  </div>
+                <div className="mt-10 grid max-w-lg grid-cols-3 gap-5 border-t border-[var(--border)] pt-6">
+                  <MiniProof title="Fast" text="Create in seconds" />
+
+                  <MiniProof title="Trackable" text="Know what clicks" />
+
+                  <MiniProof title="Flexible" text="Customize every link" />
                 </div>
               </div>
 
-              {showAccountPrompt && !loggedIn && (
+              <div id="shorten" className="relative scroll-mt-28 shortly-rise">
                 <div
-                  className={`group relative overflow-hidden rounded-2xl border p-6 text-left shadow-xl backdrop-blur-xl transition-colors duration-300 ${
-                    darkMode
-                      ? "border-slate-800 bg-slate-900/70"
-                      : "border-slate-300 bg-white"
-                  }`}
+                  className="rounded-[28px] border p-5 shadow-2xl sm:p-6"
+                  style={{
+                    borderColor: "var(--border)",
+                    background: "var(--surface)",
+                    boxShadow: "var(--shadow-card)",
+                  }}
                 >
-                  <div
-                    className={`pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full blur-3xl transition duration-500 ${
-                      darkMode
-                        ? "bg-blue-500/10 group-hover:bg-blue-500/15"
-                        : "bg-blue-500/5 group-hover:bg-blue-500/10"
-                    }`}
-                  />
-
-                  <div className="relative">
-                    <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`flex h-8 w-8 items-center justify-center rounded-lg border text-sm ${
-                              darkMode
-                                ? "border-blue-500/20 bg-blue-500/10 text-blue-400"
-                                : "border-blue-300 bg-blue-50 text-blue-600"
-                            }`}
-                          >
-                            ✦
-                          </span>
-
-                          <p
-                            className={`text-sm font-semibold ${
-                              darkMode ? "text-white" : "text-slate-950"
-                            }`}
-                          >
-                            Get more out of Shortly
-                          </p>
-                        </div>
-
-                        <p
-                          className={`mt-3 max-w-2xl text-sm leading-6 ${page.muted}`}
-                        >
-                          Your link is ready. Create a free account to keep your
-                          links organized, track clicks, and manage everything
-                          from your dashboard.
-                        </p>
-
-                        <div
-                          className={`mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs ${page.subtle}`}
-                        >
-                          <span className="flex items-center gap-1.5">
-                            <span className="text-blue-500">✓</span>
-                            Unlimited links
-                          </span>
-
-                          <span className="flex items-center gap-1.5">
-                            <span className="text-blue-500">✓</span>
-                            Click analytics
-                          </span>
-
-                          <span className="flex items-center gap-1.5">
-                            <span className="text-blue-500">✓</span>
-                            Link management
-                          </span>
-                        </div>
-                      </div>
-
-                      <Link
-                        href="/register"
-                        className={`inline-flex shrink-0 items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold transition ${
-                          darkMode
-                            ? "bg-white text-slate-950 hover:bg-slate-200"
-                            : "bg-slate-950 text-white hover:bg-slate-800"
-                        }`}
-                      >
-                        Create free account
-                        <span className="ml-2">→</span>
-                      </Link>
-                    </div>
-
-                    <p
-                      className={`relative mt-5 text-xs ${
-                        darkMode ? "text-slate-600" : "text-slate-500"
-                      }`}
-                    >
-                      No credit card required. You can keep creating links
-                      without an account until you reach the guest limit.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Trust / intro */}
-      <section
-        className={`relative z-10 border-y px-6 py-20 transition-colors duration-300 ${
-          darkMode ? "border-slate-900" : "border-slate-300 bg-slate-100"
-        }`}
-      >
-        <div className="mx-auto max-w-4xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-500">
-            More than a shorter URL
-          </p>
-
-          <h2
-            className={`mt-4 text-3xl font-bold tracking-tight sm:text-4xl ${page.heading}`}
-          >
-            Your links should do more than redirect.
-          </h2>
-
-          <p className={`mx-auto mt-5 max-w-2xl leading-7 ${page.muted}`}>
-            Shortly gives every link a purpose. Create memorable URLs, manage
-            them from one place, and understand what happens after someone
-            clicks.
-          </p>
-        </div>
-      </section>
-
-      {/* Dashboard Preview */}
-      <section className="relative z-10 overflow-hidden px-6 py-24">
-        <div className="mx-auto max-w-7xl">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-500">
-              Everything in one place
-            </p>
-
-            <h2
-              className={`mt-4 text-3xl font-bold tracking-tight sm:text-4xl ${page.heading}`}
-            >
-              See what your links are doing.
-            </h2>
-
-            <p className={`mt-5 leading-7 ${page.muted}`}>
-              Shortly gives you a clear view of your links, clicks, and
-              performance without getting in the way.
-            </p>
-          </div>
-
-          <div className="relative mx-auto mt-14 max-w-6xl">
-            <div
-              className={`absolute -inset-10 -z-10 rounded-[3rem] blur-3xl ${
-                darkMode ? "bg-blue-600/10" : "bg-blue-600/5"
-              }`}
-            />
-
-            <div
-              className={`overflow-hidden rounded-2xl border shadow-2xl transition-colors duration-300 ${
-                darkMode
-                  ? "border-slate-800 bg-slate-900 shadow-black/40"
-                  : "border-slate-300 bg-white shadow-slate-300/40"
-              }`}
-            >
-              <div
-                className={`flex items-center justify-between border-b px-5 py-4 ${
-                  darkMode
-                    ? "border-slate-800 bg-slate-950"
-                    : "border-slate-300 bg-slate-100"
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`h-3 w-3 rounded-full ${
-                      darkMode ? "bg-slate-700" : "bg-slate-400"
-                    }`}
-                  />
-                  <span
-                    className={`h-3 w-3 rounded-full ${
-                      darkMode ? "bg-slate-700" : "bg-slate-400"
-                    }`}
-                  />
-                  <span
-                    className={`h-3 w-3 rounded-full ${
-                      darkMode ? "bg-slate-700" : "bg-slate-400"
-                    }`}
-                  />
-                </div>
-
-                <div
-                  className={`hidden rounded-lg border px-5 py-1.5 text-xs sm:block ${
-                    darkMode
-                      ? "border-slate-800 bg-slate-900 text-slate-600"
-                      : "border-slate-300 bg-white text-slate-500"
-                  }`}
-                >
-                  app.shortly
-                </div>
-
-                <div className="w-12" />
-              </div>
-
-              <div className="flex min-h-[520px]">
-                <aside
-                  className={`hidden w-52 shrink-0 border-r p-5 md:block ${
-                    darkMode
-                      ? "border-slate-800 bg-slate-950"
-                      : "border-slate-300 bg-slate-100"
-                  }`}
-                >
-                  <div className="mb-10">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-xs font-bold text-white">
-                        S
-                      </div>
-
-                      <span
-                        className={`font-semibold ${
-                          darkMode ? "text-white" : "text-slate-950"
-                        }`}
-                      >
-                        Shortly
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="rounded-lg bg-blue-500/10 px-3 py-2.5 text-sm font-medium text-blue-500">
-                      Overview
-                    </div>
-
-                    <div className="px-3 py-2.5 text-sm text-slate-500">
-                      Links
-                    </div>
-
-                    <div className="px-3 py-2.5 text-sm text-slate-500">
-                      Analytics
-                    </div>
-                  </div>
-                </aside>
-
-                <div
-                  className={`min-w-0 flex-1 p-5 transition-colors duration-300 sm:p-7 ${
-                    darkMode ? "bg-slate-900" : "bg-white"
-                  }`}
-                >
-                  <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                  <div className="flex items-start justify-between gap-6 border-b border-[var(--border)] pb-5">
                     <div>
-                      <p
-                        className={`text-xs uppercase tracking-wider ${
-                          darkMode ? "text-slate-600" : "text-slate-400"
-                        }`}
-                      >
-                        Overview
+                      <p className="text-sm font-semibold">
+                        Create a short link
                       </p>
 
-                      <h3
-                        className={`mt-1 text-xl font-semibold ${page.heading}`}
+                      <p className="mt-1 text-sm shortly-muted">
+                        Paste a destination and optionally choose your own
+                        alias.
+                      </p>
+                    </div>
+
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                      style={{
+                        background: "var(--brand-soft)",
+                        color: "var(--brand)",
+                      }}
+                    >
+                      <Link2 className="h-5 w-5" />
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+                    <div>
+                      <label
+                        htmlFor="home-url"
+                        className="mb-2 block text-sm font-medium"
                       >
-                        Your links
-                      </h3>
+                        Destination URL
+                      </label>
+
+                      <input
+                        id="home-url"
+                        type="url"
+                        value={url}
+                        onChange={(event) => setUrl(event.target.value)}
+                        placeholder="https://example.com/your-long-url"
+                        autoComplete="url"
+                        className="shortly-input"
+                        required
+                      />
                     </div>
 
-                    <div className="rounded-lg bg-blue-600 px-4 py-2 text-center text-xs font-semibold text-white">
-                      + Create link
-                    </div>
-                  </div>
+                    <div>
+                      <label
+                        htmlFor="home-alias"
+                        className="mb-2 block text-sm font-medium"
+                      >
+                        Custom alias
+                        <span className="ml-2 font-normal shortly-subtle">
+                          Optional
+                        </span>
+                      </label>
 
-                  <div className="mt-7 grid gap-3 sm:grid-cols-3">
-                    <DashboardStat
-                      label="Total clicks"
-                      value="12,483"
-                      change="+18.4%"
-                      darkMode={darkMode}
-                    />
+                      <div
+                        className="flex min-h-[46px] overflow-hidden rounded-[var(--radius-sm)] border transition focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10"
+                        style={{
+                          borderColor: "var(--border)",
+                          background: "var(--surface)",
+                        }}
+                      >
+                        <span className="flex items-center border-r border-[var(--border)] bg-[var(--surface-muted)] px-3 text-sm shortly-subtle">
+                          {host}/
+                        </span>
 
-                    <DashboardStat
-                      label="Links created"
-                      value="247"
-                      change="+12.2%"
-                      darkMode={darkMode}
-                    />
-
-                    <DashboardStat
-                      label="Active links"
-                      value="189"
-                      change="+8.7%"
-                      darkMode={darkMode}
-                    />
-                  </div>
-
-                  <div
-                    className={`mt-5 rounded-xl border p-5 ${
-                      darkMode
-                        ? "border-slate-800 bg-slate-950/60"
-                        : "border-slate-300 bg-slate-100"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className={`text-sm font-medium ${page.heading}`}>
-                          Click activity
-                        </p>
-
-                        <p
-                          className={`mt-1 text-xs ${
-                            darkMode ? "text-slate-600" : "text-slate-400"
-                          }`}
-                        >
-                          Last 7 days
-                        </p>
+                        <input
+                          id="home-alias"
+                          type="text"
+                          value={alias}
+                          onChange={(event) => setAlias(event.target.value)}
+                          placeholder="campaign"
+                          autoComplete="off"
+                          className="min-w-0 flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-[var(--subtle)]"
+                        />
                       </div>
-
-                      <span className="text-xs text-blue-500">+18.4%</span>
                     </div>
 
-                    <div className="mt-8 flex h-36 items-end gap-2 sm:gap-4">
-                      {[35, 52, 42, 70, 58, 82, 96].map((height, index) => (
-                        <div key={index} className="flex flex-1 items-end">
-                          <div
-                            className="w-full rounded-t-md bg-blue-500/60 transition hover:bg-blue-400"
-                            style={{ height: `${height}%` }}
-                          />
-                        </div>
-                      ))}
-                    </div>
+                    {error && <p className="text-sm text-red-500">{error}</p>}
 
-                    <div
-                      className={`mt-3 flex justify-between text-[10px] ${
-                        darkMode ? "text-slate-700" : "text-slate-400"
-                      }`}
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="shortly-button-primary w-full disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <span>Mon</span>
-                      <span>Tue</span>
-                      <span>Wed</span>
-                      <span>Thu</span>
-                      <span>Fri</span>
-                      <span>Sat</span>
-                      <span>Sun</span>
-                    </div>
-                  </div>
+                      {loading ? "Creating link..." : "Create short link"}
+                    </button>
+                  </form>
 
-                  <div
-                    className={`mt-5 overflow-hidden rounded-xl border ${
-                      darkMode
-                        ? "border-slate-800 bg-slate-950/60"
-                        : "border-slate-300 bg-slate-100"
-                    }`}
-                  >
-                    <div
-                      className={`border-b px-5 py-4 ${
-                        darkMode ? "border-slate-800" : "border-slate-300"
-                      }`}
-                    >
-                      <p className={`text-sm font-medium ${page.heading}`}>
-                        Recent links
-                      </p>
-                    </div>
-
-                    <div
-                      className={`divide-y ${
-                        darkMode ? "divide-slate-800" : "divide-slate-300"
-                      }`}
-                    >
-                      <PreviewLink
-                        link="shortly.app/product-launch"
-                        destination="example.com/product"
-                        clicks="4,832"
-                        darkMode={darkMode}
-                      />
-
-                      <PreviewLink
-                        link="shortly.app/my-video"
-                        destination="youtube.com/watch"
-                        clicks="2,190"
-                        darkMode={darkMode}
-                      />
-
-                      <PreviewLink
-                        link="shortly.app/portfolio"
-                        destination="josh-daramola.pages.dev"
-                        clicks="1,426"
-                        darkMode={darkMode}
-                      />
-                    </div>
-                  </div>
+                  <p className="mt-4 text-center text-xs shortly-subtle">
+                    No account required to get started.
+                  </p>
                 </div>
+
+                {shortUrl && (
+                  <div
+                    className="mt-4 rounded-2xl border p-4 shortly-rise"
+                    style={{
+                      borderColor: "rgba(59, 130, 246, 0.35)",
+                      background: "var(--brand-soft)",
+                    }}
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-blue-500">
+                      Your short link
+                    </p>
+
+                    <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <a
+                        href={shortUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-w-0 flex-1 truncate font-semibold text-blue-500 hover:text-blue-400"
+                      >
+                        {shortUrl}
+                      </a>
+
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleCopy}
+                          className="shortly-button-secondary"
+                        >
+                          <Copy className="h-4 w-4" />
+
+                          {copied ? "Copied" : "Copy"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setShowShareModal(true)}
+                          className="shortly-button-primary"
+                        >
+                          <Share2 className="h-4 w-4" />
+                          Share
+                        </button>
+                      </div>
+                    </div>
+
+                    {showAccountPrompt && !loggedIn && (
+                      <div className="mt-4 flex flex-col gap-3 border-t border-blue-500/20 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm shortly-muted">
+                          Create an account to keep and manage your links.
+                        </p>
+
+                        <Link
+                          href="/register"
+                          className="text-sm font-semibold text-blue-500 hover:text-blue-400"
+                        >
+                          Create account →
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Features */}
-      <section id="features" className="relative z-10 px-6 py-24">
-        <div className="mx-auto max-w-7xl">
-          <div className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-500">
-              Everything you need
-            </p>
+        <section className="border-b border-[var(--border)]">
+          <div className="shortly-container">
+            <div className="grid gap-6 py-8 sm:grid-cols-2 lg:grid-cols-4">
+              <TrustItem
+                icon={Link2}
+                title="Clean links"
+                description="Easy to share and remember"
+              />
 
-            <h2
-              className={`mt-4 text-3xl font-bold tracking-tight sm:text-4xl ${page.heading}`}
-            >
-              Simple on the surface. Powerful underneath.
-            </h2>
+              <TrustItem
+                icon={BarChart3}
+                title="Useful analytics"
+                description="See what happens after the click"
+              />
 
-            <p className={`mt-5 leading-7 ${page.muted}`}>
-              From your first shortened URL to hundreds of links across
-              different projects, Shortly keeps link management straightforward.
-            </p>
+              <TrustItem
+                icon={QrCode}
+                title="QR ready"
+                description="Share online and offline"
+              />
+
+              <TrustItem
+                icon={ShieldCheck}
+                title="Built with control"
+                description="Manage status and expiration"
+              />
+            </div>
           </div>
+        </section>
 
-          <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            <FeatureCard
-              icon="⚡"
-              title="Instant creation"
-              description="Paste a URL and create a clean, shareable link in seconds without unnecessary steps."
-              darkMode={darkMode}
-            />
-
-            <FeatureCard
-              icon="✦"
-              title="Custom links"
-              description="Give your URLs meaningful identifiers that are easier to recognize, remember, and share."
-              darkMode={darkMode}
-            />
-
-            <FeatureCard
-              icon="◉"
-              title="Smart analytics"
-              description="Monitor clicks and understand how your links are performing over time."
-              darkMode={darkMode}
-            />
-
-            <FeatureCard
-              icon="⌘"
-              title="Link management"
-              description="Keep your shortened URLs organized and accessible from a central dashboard."
-              darkMode={darkMode}
-            />
-
-            <FeatureCard
-              icon="◈"
-              title="Built for sharing"
-              description="Use Shortly links across websites, campaigns, social platforms, messages, and documents."
-              darkMode={darkMode}
-            />
-
-            <FeatureCard
-              icon="✓"
-              title="Secure by design"
-              description="Shortly is designed around secure connections and responsible link handling."
-              darkMode={darkMode}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Use Cases */}
-      <section
-        id="use-cases"
-        className={`relative z-10 border-y px-6 py-24 transition-colors duration-300 ${
-          darkMode
-            ? "border-slate-900 bg-slate-950/70"
-            : "border-slate-300 bg-slate-100"
-        }`}
-      >
-        <div className="mx-auto max-w-7xl">
-          <div className="text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-500">
-              Built for the way you work
-            </p>
-
-            <h2
-              className={`mt-4 text-3xl font-bold tracking-tight sm:text-4xl ${page.heading}`}
-            >
-              One link platform. Different possibilities.
-            </h2>
-          </div>
-
-          <div className="mt-14 grid gap-6 lg:grid-cols-3">
-            <UseCaseCard
-              number="01"
-              title="Creators"
-              description="Share cleaner links with your audience without turning every post, bio, or campaign into a wall of characters."
-              darkMode={darkMode}
-            />
-
-            <UseCaseCard
-              number="02"
-              title="Businesses"
-              description="Create campaign-friendly URLs and use click data to understand which links are getting attention."
-              darkMode={darkMode}
-            />
-
-            <UseCaseCard
-              number="03"
-              title="Developers"
-              description="Create and manage short links as part of modern web applications and digital products."
-              darkMode={darkMode}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Comparison */}
-      <section className="relative z-10 px-6 py-24">
-        <div className="mx-auto max-w-5xl">
-          <div
-            className={`rounded-3xl border p-8 transition-colors duration-300 sm:p-12 ${
-              darkMode
-                ? "border-slate-800 bg-slate-900/50"
-                : "border-slate-300 bg-slate-100"
-            }`}
-          >
-            <div className="grid gap-12 md:grid-cols-2 md:items-center">
+        <section className="shortly-section">
+          <div className="shortly-container">
+            <div className="grid gap-12 lg:grid-cols-[.85fr_1.15fr] lg:items-center">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-500">
-                  Why Shortly?
-                </p>
+                <p className="shortly-eyebrow">One place for every link</p>
 
-                <h2
-                  className={`mt-4 text-3xl font-bold tracking-tight sm:text-4xl ${page.heading}`}
-                >
-                  Make your links work harder.
+                <h2 className="mt-4 max-w-xl text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">
+                  Link management that stays out of your way.
                 </h2>
 
-                <p className={`mt-5 leading-7 ${page.muted}`}>
-                  Long URLs can be difficult to share, remember, and understand.
-                  Shortly turns them into compact links with useful tools behind
-                  every click.
+                <p className="mt-5 max-w-xl text-base leading-7 shortly-muted">
+                  Create, organize, edit, disable, share and understand your
+                  links without turning a simple workflow into a complicated
+                  dashboard.
                 </p>
+
+                <Link
+                  href="/link-management"
+                  className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-blue-500 hover:text-blue-400"
+                >
+                  Explore link management
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </div>
 
-              <div className="space-y-3">
-                <ComparisonRow
-                  oldText="Long and difficult URLs"
-                  newText="Clean, compact links"
-                  darkMode={darkMode}
-                />
-
-                <ComparisonRow
-                  oldText="Random-looking addresses"
-                  newText="Custom identifiers"
-                  darkMode={darkMode}
-                />
-
-                <ComparisonRow
-                  oldText="No visibility after sharing"
-                  newText="Click tracking"
-                  darkMode={darkMode}
-                />
-
-                <ComparisonRow
-                  oldText="Links scattered everywhere"
-                  newText="Centralized management"
-                  darkMode={darkMode}
-                />
-              </div>
+              <DashboardPreview />
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* CTA */}
-      <section className="relative z-10 px-6 pb-24">
-        <div className="mx-auto max-w-5xl overflow-hidden rounded-3xl border border-blue-500/20 bg-blue-600 px-8 py-16 text-center shadow-2xl shadow-blue-950/30 sm:px-12">
-          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Ready to simplify your links?
-          </h2>
+        <section
+          className="border-y border-[var(--border)]"
+          style={{
+            background: "var(--surface-muted)",
+          }}
+        >
+          <div className="shortly-container shortly-section">
+            <div className="max-w-2xl">
+              <p className="shortly-eyebrow">Built around the click</p>
 
-          <p className="mx-auto mt-4 max-w-xl text-blue-100">
-            Create your first Shortly link and turn a long URL into something
-            cleaner, smarter, and easier to share.
-          </p>
+              <h2 className="mt-4 text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">
+                Shorten once. Learn every time it is opened.
+              </h2>
 
-          <a
-            href="#top"
-            onClick={(event) => {
-              event.preventDefault();
-
-              window.scrollTo({
-                top: 0,
-                behavior: "smooth",
-              });
-            }}
-            className="mt-8 inline-flex rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
-          >
-            Create a short link
-          </a>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer
-        className={`relative z-10 border-t px-6 py-12 transition-colors duration-300 ${
-          darkMode ? "border-slate-900" : "border-slate-300"
-        }`}
-      >
-        <div className="mx-auto max-w-7xl">
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <Link href="/" className="inline-block">
-                <img src="/logo.svg" alt="Shortly" className="h-9 w-auto" />
-              </Link>
-
-              <p className={`mt-4 max-w-xs text-sm leading-6 ${page.subtle}`}>
-                A simple link management platform for creating, sharing, and
-                tracking short URLs.
+              <p className="mt-5 text-base leading-7 shortly-muted">
+                A short URL should do more than redirect. Shortly gives every
+                link a useful layer of context so you can see what is working.
               </p>
             </div>
 
-            <FooterColumn
-              title="Product"
-              links={[
-                { label: "URL Shortener", href: "/" },
-                { label: "Dashboard", href: "/dashboard" },
-                { label: "Analytics", href: "/analytics" },
-              ]}
-              darkMode={darkMode}
-            />
+            <div className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--border)] md:grid-cols-3">
+              <Capability
+                icon={MousePointerClick}
+                number="01"
+                title="Track clicks"
+                description="Understand how often each link is being opened."
+              />
 
-            <FooterColumn
-              title="Account"
-              links={[
-                { label: "Log in", href: "/login" },
-                { label: "Create account", href: "/register" },
-              ]}
-              darkMode={darkMode}
-            />
+              <Capability
+                icon={Globe2}
+                number="02"
+                title="See geography"
+                description="Know which countries are generating traffic."
+              />
 
-            <FooterColumn
-              title="Legal"
-              links={[
-                { label: "Privacy", href: "/privacy" },
-                { label: "Terms", href: "/terms" },
-              ]}
-              darkMode={darkMode}
-            />
+              <Capability
+                icon={TrendingUp}
+                number="03"
+                title="Spot momentum"
+                description="Compare link performance and find your strongest URLs."
+              />
+            </div>
           </div>
+        </section>
 
-          <div
-            className={`mt-12 flex justify-center border-t pt-6 text-center text-sm ${
-              darkMode
-                ? "border-slate-900 text-slate-600"
-                : "border-slate-300 text-slate-500"
-            }`}
-          >
-            <p>© 2026 Shortly. All rights reserved. Built by Nexvius Labs.</p>
+        <section className="shortly-section">
+          <div className="shortly-container">
+            <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+              <AnalyticsPreview />
+
+              <div className="lg:pl-8">
+                <p className="shortly-eyebrow">Analytics without noise</p>
+
+                <h2 className="mt-4 text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">
+                  Know which links deserve your attention.
+                </h2>
+
+                <p className="mt-5 max-w-xl text-base leading-7 shortly-muted">
+                  See click activity, top-performing URLs, traffic sources and
+                  geographic patterns without digging through a complicated
+                  reporting suite.
+                </p>
+
+                <div className="mt-8 space-y-4">
+                  <FeatureLine text="Per-link click counts and activity" />
+
+                  <FeatureLine text="Country and referrer visibility" />
+
+                  <FeatureLine text="A dashboard designed for quick decisions" />
+                </div>
+
+                <Link
+                  href="/link-analytics"
+                  className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-blue-500 hover:text-blue-400"
+                >
+                  Explore analytics
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
           </div>
-        </div>
-      </footer>
-    </main>
-  );
-}
+        </section>
 
-function FeatureCard({
-  icon,
-  title,
-  description,
-  darkMode,
-}: {
-  icon: string;
-  title: string;
-  description: string;
-  darkMode: boolean;
-}) {
-  return (
-    <div
-      className={`group rounded-2xl border p-7 transition duration-300 hover:-translate-y-1 ${
-        darkMode
-          ? "border-slate-800 bg-slate-900/40 hover:border-blue-500/30 hover:bg-slate-900/70"
-          : "border-slate-300 bg-white hover:border-blue-300 hover:bg-slate-50"
-      }`}
-    >
-      <div
-        className={`flex h-11 w-11 items-center justify-center rounded-xl border text-lg ${
-          darkMode
-            ? "border-blue-500/20 bg-blue-500/10 text-blue-400"
-            : "border-blue-300 bg-blue-50 text-blue-600"
-        }`}
-      >
-        {icon}
-      </div>
+        <section
+          className="border-y border-[var(--border)]"
+          style={{
+            background: "var(--surface-muted)",
+          }}
+        >
+          <div className="shortly-container shortly-section">
+            <div className="text-center">
+              <p className="shortly-eyebrow">Made for real workflows</p>
 
-      <h3
-        className={`mt-6 text-lg font-semibold ${
-          darkMode ? "text-white" : "text-slate-950"
-        }`}
-      >
-        {title}
-      </h3>
+              <h2 className="mx-auto mt-4 max-w-2xl text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">
+                Useful whether you share one link or hundreds.
+              </h2>
+            </div>
 
-      <p
-        className={`mt-3 text-sm leading-6 transition ${
-          darkMode
-            ? "text-slate-500 group-hover:text-slate-400"
-            : "text-slate-500 group-hover:text-slate-600"
-        }`}
-      >
-        {description}
-      </p>
+            <div className="mt-12 grid gap-5 lg:grid-cols-3">
+              <UseCase
+                label="Marketing"
+                title="Campaign links that are easier to share and measure."
+                description="Create memorable URLs for campaigns, channels and launches while keeping performance visible."
+                href="/solutions/marketing"
+              />
+
+              <UseCase
+                label="Creators"
+                title="Clean links for bios, posts and communities."
+                description="Give your audience simple links without losing visibility into what gets attention."
+                href="/solutions/creators"
+              />
+
+              <UseCase
+                label="Developers"
+                title="A link layer that fits modern products."
+                description="Manage redirects and link behavior without building the whole system yourself."
+                href="/solutions/developers"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="shortly-section">
+          <div className="shortly-container">
+            <div
+              className="relative overflow-hidden rounded-[30px] border px-6 py-14 text-center sm:px-12 sm:py-16"
+              style={{
+                borderColor: "rgba(59, 130, 246, 0.3)",
+                background: darkMode
+                  ? "linear-gradient(135deg, #0f172a 0%, #0b1736 55%, #102554 100%)"
+                  : "linear-gradient(135deg, #eff6ff 0%, #ffffff 60%, #dbeafe 100%)",
+              }}
+            >
+              <div className="pointer-events-none absolute right-[-120px] top-[-180px] h-96 w-96 rounded-full bg-blue-500/10 blur-[100px]" />
+
+              <div className="relative mx-auto max-w-2xl">
+                <div
+                  className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl"
+                  style={{
+                    background: "var(--brand-soft)",
+                    color: "var(--brand)",
+                  }}
+                >
+                  <Sparkles className="h-5 w-5" />
+                </div>
+
+                <h2 className="mt-6 text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">
+                  A better home for your links.
+                </h2>
+
+                <p className="mx-auto mt-5 max-w-xl text-base leading-7 shortly-muted">
+                  Create your first short link now, or open an account to manage
+                  everything from one place.
+                </p>
+
+                <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+                  <a href="#shorten" className="shortly-button-primary">
+                    Create a short link
+                  </a>
+
+                  <Link href="/register" className="shortly-button-secondary">
+                    Create an account
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <SiteFooter />
     </div>
   );
 }
 
-function UseCaseCard({
+function MiniProof({ title, text }: { title: string; text: string }) {
+  return (
+    <div>
+      <p className="text-sm font-semibold">{title}</p>
+
+      <p className="mt-1 text-xs shortly-subtle">{text}</p>
+    </div>
+  );
+}
+
+function TrustItem({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: typeof Link2;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div
+        className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+        style={{
+          background: "var(--brand-soft)",
+          color: "var(--brand)",
+        }}
+      >
+        <Icon className="h-4 w-4" />
+      </div>
+
+      <div>
+        <p className="text-sm font-semibold">{title}</p>
+
+        <p className="mt-1 text-xs shortly-subtle">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+function DashboardPreview() {
+  const links = [
+    ["shortly.app/launch", "nexviuslabs.com/product-launch", "1,842"],
+    ["shortly.app/portfolio", "nexviuslabs.com/work", "926"],
+    ["shortly.app/newsletter", "newsletter.example.com/october", "641"],
+  ];
+
+  return (
+    <div
+      className="overflow-hidden rounded-2xl border shadow-xl shortly-hover-lift"
+      style={{
+        borderColor: "var(--border)",
+        background: "var(--surface)",
+      }}
+    >
+      <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
+        <div>
+          <p className="text-sm font-semibold">Your links</p>
+
+          <p className="mt-0.5 text-xs shortly-subtle">Recent links</p>
+        </div>
+
+        <span className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white">
+          + New link
+        </span>
+      </div>
+
+      <div className="grid grid-cols-3 gap-px border-b border-[var(--border)] bg-[var(--border)]">
+        {[
+          ["Links", "24"],
+          ["Clicks", "4.8k"],
+          ["Active", "22"],
+        ].map(([label, value]) => (
+          <div key={label} className="bg-[var(--surface)] px-4 py-4">
+            <p className="text-xs shortly-subtle">{label}</p>
+
+            <p className="mt-1 text-lg font-semibold">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      {links.map(([short, destination, clicks], index) => (
+        <div
+          key={short}
+          className={`grid gap-3 px-5 py-4 sm:grid-cols-[1fr_auto_auto] sm:items-center ${
+            index !== links.length - 1 ? "border-b border-[var(--border)]" : ""
+          }`}
+        >
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-blue-500">
+              {short}
+            </p>
+
+            <p className="mt-1 truncate text-xs shortly-subtle">
+              {destination}
+            </p>
+          </div>
+
+          <p className="text-xs font-medium shortly-muted">{clicks} clicks</p>
+
+          <span className="w-fit rounded-full bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-500">
+            Active
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Capability({
+  icon: Icon,
   number,
   title,
   description,
-  darkMode,
 }: {
+  icon: typeof MousePointerClick;
   number: string;
   title: string;
   description: string;
-  darkMode: boolean;
 }) {
   return (
-    <div
-      className={`rounded-2xl border p-8 transition-colors duration-300 ${
-        darkMode
-          ? "border-slate-800 bg-slate-900/30"
-          : "border-slate-300 bg-white"
-      }`}
-    >
-      <span className="text-sm font-semibold text-blue-500">{number}</span>
-
-      <h3
-        className={`mt-8 text-2xl font-semibold ${
-          darkMode ? "text-white" : "text-slate-950"
-        }`}
-      >
-        {title}
-      </h3>
-
-      <p
-        className={`mt-4 text-sm leading-7 ${
-          darkMode ? "text-slate-500" : "text-slate-600"
-        }`}
-      >
-        {description}
-      </p>
-    </div>
-  );
-}
-
-function ComparisonRow({
-  oldText,
-  newText,
-  darkMode,
-}: {
-  oldText: string;
-  newText: string;
-  darkMode: boolean;
-}) {
-  return (
-    <div
-      className={`grid grid-cols-1 gap-3 rounded-xl border p-4 sm:grid-cols-2 sm:gap-5 ${
-        darkMode
-          ? "border-slate-800 bg-slate-950/70"
-          : "border-slate-300 bg-white"
-      }`}
-    >
-      <div
-        className={`text-sm ${darkMode ? "text-slate-500" : "text-slate-600"}`}
-      >
-        <span
-          className={`mr-2 ${darkMode ? "text-slate-700" : "text-slate-400"}`}
+    <div className="bg-[var(--surface)] p-7 sm:p-8">
+      <div className="flex items-center justify-between">
+        <div
+          className="flex h-10 w-10 items-center justify-center rounded-xl"
+          style={{
+            background: "var(--brand-soft)",
+            color: "var(--brand)",
+          }}
         >
-          —
-        </span>
-        {oldText}
+          <Icon className="h-5 w-5" />
+        </div>
+
+        <span className="font-mono text-xs shortly-subtle">{number}</span>
       </div>
 
-      <div
-        className={`text-sm font-medium ${
-          darkMode ? "text-slate-200" : "text-slate-700"
-        }`}
-      >
-        <span className="mr-2 text-blue-500">✓</span>
-        {newText}
-      </div>
+      <h3 className="mt-8 text-lg font-semibold">{title}</h3>
+
+      <p className="mt-3 text-sm leading-6 shortly-muted">{description}</p>
     </div>
   );
 }
 
-function FooterColumn({
-  title,
-  links,
-  darkMode,
-}: {
-  title: string;
-  links: { label: string; href: string }[];
-  darkMode: boolean;
-}) {
-  return (
-    <div>
-      <h3
-        className={`text-sm font-semibold ${
-          darkMode ? "text-slate-300" : "text-slate-700"
-        }`}
-      >
-        {title}
-      </h3>
+function AnalyticsPreview() {
+  const bars = [26, 38, 30, 55, 46, 67, 51, 79, 62, 88, 72, 96];
 
-      <div className="mt-4 space-y-3">
-        {links.map((link) => (
-          <Link
-            key={link.label}
-            href={link.href}
-            className={`block text-sm transition ${
-              darkMode
-                ? "text-slate-500 hover:text-white"
-                : "text-slate-500 hover:text-slate-950"
-            }`}
+  return (
+    <div
+      className="rounded-2xl border p-5 shadow-xl shortly-hover-lift sm:p-6"
+      style={{
+        borderColor: "var(--border)",
+        background: "var(--surface)",
+      }}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold">Click activity</p>
+
+          <p className="mt-1 text-xs shortly-subtle">Last 30 days</p>
+        </div>
+
+        <span className="rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-xs shortly-muted">
+          30 days
+        </span>
+      </div>
+
+      <div className="mt-6 flex items-end gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 pb-4 pt-8">
+        {bars.map((height, index) => (
+          <div
+            key={`${height}-${index}`}
+            className="flex h-40 flex-1 items-end"
           >
-            {link.label}
-          </Link>
+            <div
+              className="w-full rounded-t-sm bg-blue-500/80"
+              style={{
+                height: `${height}%`,
+              }}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 grid grid-cols-3 gap-3">
+        {[
+          ["Clicks", "4,821"],
+          ["Countries", "18"],
+          ["Top source", "Direct"],
+        ].map(([label, value]) => (
+          <div
+            key={label}
+            className="rounded-xl border border-[var(--border)] p-3"
+          >
+            <p className="text-[11px] shortly-subtle">{label}</p>
+
+            <p className="mt-1 text-sm font-semibold">{value}</p>
+          </div>
         ))}
       </div>
     </div>
   );
 }
 
-function DashboardStat({
+function FeatureLine({ text }: { text: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span
+        className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+        style={{
+          background: "var(--brand-soft)",
+          color: "var(--brand)",
+        }}
+      >
+        <Check className="h-3 w-3" />
+      </span>
+
+      <p className="text-sm shortly-muted">{text}</p>
+    </div>
+  );
+}
+
+function UseCase({
   label,
-  value,
-  change,
-  darkMode,
+  title,
+  description,
+  href,
 }: {
   label: string;
-  value: string;
-  change: string;
-  darkMode: boolean;
+  title: string;
+  description: string;
+  href: string;
 }) {
   return (
-    <div
-      className={`rounded-xl border p-4 ${
-        darkMode
-          ? "border-slate-800 bg-slate-950/60"
-          : "border-slate-300 bg-slate-100"
-      }`}
+    <Link
+      href={href}
+      className="group shortly-card-flat p-7 shortly-hover-lift sm:p-8"
     >
-      <p
-        className={`text-xs ${darkMode ? "text-slate-600" : "text-slate-400"}`}
-      >
-        {label}
-      </p>
+      <p className="shortly-eyebrow">{label}</p>
 
-      <div className="mt-2 flex items-end justify-between gap-2">
-        <p
-          className={`text-xl font-semibold ${
-            darkMode ? "text-white" : "text-slate-950"
-          }`}
-        >
-          {value}
-        </p>
+      <h3 className="mt-7 text-2xl font-semibold tracking-[-0.025em]">
+        {title}
+      </h3>
 
-        <span className="text-[10px] font-medium text-blue-500">{change}</span>
-      </div>
-    </div>
-  );
-}
+      <p className="mt-4 text-sm leading-7 shortly-muted">{description}</p>
 
-function PreviewLink({
-  link,
-  destination,
-  clicks,
-  darkMode,
-}: {
-  link: string;
-  destination: string;
-  clicks: string;
-  darkMode: boolean;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 px-5 py-4">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-blue-500">{link}</p>
-
-        <p
-          className={`mt-1 truncate text-xs ${
-            darkMode ? "text-slate-600" : "text-slate-500"
-          }`}
-        >
-          {destination}
-        </p>
-      </div>
-
-      <div className="shrink-0 text-right">
-        <p
-          className={`text-sm font-medium ${
-            darkMode ? "text-white" : "text-slate-950"
-          }`}
-        >
-          {clicks}
-        </p>
-
-        <p
-          className={`mt-1 text-[10px] ${
-            darkMode ? "text-slate-600" : "text-slate-500"
-          }`}
-        >
-          clicks
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function ShareModal({
-  shortUrl,
-  darkMode,
-  onClose,
-  onCopy,
-}: {
-  shortUrl: string;
-  darkMode: boolean;
-  onClose: () => void;
-  onCopy: () => Promise<void>;
-}) {
-  const encodedUrl = encodeURIComponent(shortUrl);
-  const shareText = encodeURIComponent("Check out this link from Shortly");
-  const [canNativeShare, setCanNativeShare] = useState(false);
-
-  useEffect(() => {
-    setCanNativeShare(typeof navigator.share === "function");
-  }, []);
-
-  useEffect(() => {
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
-
-    document.addEventListener("keydown", handleEscape);
-
-    return () => document.removeEventListener("keydown", handleEscape);
-  }, [onClose]);
-
-  function openShare(target: string) {
-    window.open(target, "_blank", "noopener,noreferrer,width=700,height=600");
-    onClose();
-  }
-
-  async function nativeShare() {
-    try {
-      await navigator.share({ title: "Shortly link", url: shortUrl });
-      onClose();
-    } catch {
-      /* user cancelled */
-    }
-  }
-
-  const options = [
-    {
-      label: "WhatsApp",
-      color: "bg-green-500 hover:bg-green-600",
-      href: `https://wa.me/?text=${shareText}%20${encodedUrl}`,
-      icon: (
-        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.521-.075-.149-.669-1.611-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.372-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12.004 2a9.95 9.95 0 0 0-8.47 15.1L2 22l4.9-1.526A10 10 0 1 0 12.004 2m0 18.3a8.3 8.3 0 0 1-4.23-1.157l-.303-.18-2.91.906.922-2.834-.198-.308A8.3 8.3 0 1 1 12.004 20.3" />
-      ),
-    },
-    {
-      label: "X",
-      color: "bg-black hover:bg-slate-800",
-      href: `https://twitter.com/intent/tweet?text=${shareText}&url=${encodedUrl}`,
-      icon: (
-        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817-5.966 6.817H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-      ),
-    },
-    {
-      label: "Facebook",
-      color: "bg-blue-600 hover:bg-blue-500",
-      href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
-      icon: (
-        <path d="M13.5 21v-8h2.7l.4-3h-3.1V8.1c0-.9.3-1.5 1.6-1.5h1.7V4a22 22 0 0 0-2.4-.1c-2.4 0-4 1.5-4 4.1V10H7.7v3H10v8h3.5Z" />
-      ),
-    },
-    {
-      label: "LinkedIn",
-      color: "bg-[#0A66C2] hover:bg-blue-500",
-      href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
-      icon: (
-        <path d="M6.5 8.2A2 2 0 1 0 6.5 4.2a2 2 0 0 0 0 4ZM4.7 9.8h3.6V20H4.7V9.8Zm5.8 0h3.4v1.4h.1c.5-.9 1.6-1.8 3.4-1.8 3.6 0 4.3 2.4 4.3 5.5V20h-3.6v-4.5c0-1.1 0-2.6-1.6-2.6s-1.9 1.2-1.9 2.5V20h-3.6V9.8Z" />
-      ),
-    },
-  ];
-
-  const rowButton = darkMode
-    ? "border-slate-700 text-slate-300 hover:border-blue-500 hover:bg-slate-800 hover:text-white"
-    : "border-slate-200 text-slate-700 hover:border-blue-400 hover:bg-slate-50 hover:text-slate-950";
-
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm"
-      onClick={onClose}
-      role="presentation"
-    >
-      <div
-        className={`w-full max-w-sm rounded-2xl border p-6 shadow-2xl ${
-          darkMode
-            ? "border-slate-700 bg-slate-900 text-white"
-            : "border-slate-200 bg-white text-slate-950"
-        }`}
-        onClick={(event) => event.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="share-title"
-      >
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 id="share-title" className="text-lg font-semibold">
-              Share link
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Choose where to share your short link
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close share dialog"
-            className={`flex h-8 w-8 items-center justify-center rounded-lg text-xl transition ${
-              darkMode
-                ? "text-slate-500 hover:bg-slate-800 hover:text-white"
-                : "text-slate-400 hover:bg-slate-100 hover:text-slate-900"
-            }`}
-          >
-            ×
-          </button>
-        </div>
-
-        <div
-          className={`mt-5 truncate rounded-xl border px-4 py-3 text-sm text-blue-500 ${
-            darkMode
-              ? "border-slate-800 bg-slate-950"
-              : "border-slate-200 bg-slate-50"
-          }`}
-        >
-          {shortUrl}
-        </div>
-
-        <div className="mt-6 grid grid-cols-4 gap-3">
-          {options.map((option) => (
-            <button
-              key={option.label}
-              type="button"
-              onClick={() => openShare(option.href)}
-              className="group flex flex-col items-center gap-2"
-            >
-              <span
-                className={`flex h-12 w-12 items-center justify-center rounded-xl text-white transition group-hover:-translate-y-0.5 ${option.color}`}
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="h-6 w-6"
-                  aria-hidden="true"
-                >
-                  {option.icon}
-                </svg>
-              </span>
-
-              <span className="text-xs text-slate-500 transition group-hover:text-blue-500">
-                {option.label}
-              </span>
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-6 space-y-2">
-          <button
-            type="button"
-            onClick={onCopy}
-            className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition ${rowButton}`}
-          >
-            <span className="text-base">⧉</span>
-            Copy link
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              const subject = encodeURIComponent("Check out this link");
-              const body = encodeURIComponent(
-                `I wanted to share this link with you:\n\n${shortUrl}`,
-              );
-
-              window.location.href = `mailto:?subject=${subject}&body=${body}`;
-              onClose();
-            }}
-            className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition ${rowButton}`}
-          >
-            <span className="text-base">✉</span>
-            Share via email
-          </button>
-
-          {canNativeShare && (
-            <button
-              type="button"
-              onClick={nativeShare}
-              className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition ${rowButton}`}
-            >
-              <span className="text-base">↗</span>
-              More sharing options
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
+      <span className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-blue-500">
+        Learn more
+        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+      </span>
+    </Link>
   );
 }
