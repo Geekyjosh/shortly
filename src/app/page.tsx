@@ -199,9 +199,9 @@ export default function Home() {
           </div>
 
           <div className="shortly-container relative">
-            <div className="grid min-h-[720px] items-center gap-14 py-16 lg:grid-cols-[1.05fr_.95fr] lg:py-24">
+            <div className="grid items-center gap-10 pt-6 pb-12 sm:py-12 lg:min-h-[620px] lg:grid-cols-[1.05fr_.95fr] lg:gap-14 lg:py-16">
               <div className="shortly-rise">
-                <h1 className="mt-7 max-w-3xl text-5xl font-semibold leading-[0.98] tracking-[-0.045em] sm:text-6xl lg:text-[72px]">
+                <h1 className="max-w-3xl text-5xl font-semibold leading-[0.98] tracking-[-0.045em] sm:text-6xl lg:text-[72px]">
                   Short links that tell you more.
                 </h1>
 
