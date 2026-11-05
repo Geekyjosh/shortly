@@ -201,18 +201,6 @@ export default function Home() {
           <div className="shortly-container relative">
             <div className="grid min-h-[720px] items-center gap-14 py-16 lg:grid-cols-[1.05fr_.95fr] lg:py-24">
               <div className="shortly-rise">
-                <div
-                  className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-                  style={{
-                    borderColor: "var(--border)",
-                    background: "var(--surface)",
-                    color: "var(--muted)",
-                  }}
-                >
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                  Link management without the clutter
-                </div>
-
                 <h1 className="mt-7 max-w-3xl text-5xl font-semibold leading-[0.98] tracking-[-0.045em] sm:text-6xl lg:text-[72px]">
                   Short links that tell you more.
                 </h1>
