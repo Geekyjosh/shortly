@@ -1,3 +1,24 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "URL Shortener & Link Generator",
+  description: "Create free short URLs with custom aliases, link controls, click tracking and QR codes. Explore the URL shortening tools available in Shortly.",
+  alternates: {
+    canonical: "/features",
+  },
+  openGraph: {
+    type: "website",
+    title: "URL Shortener & Link Generator | Shortly",
+    description: "Create free short URLs with custom aliases, link controls, click tracking and QR codes. Explore the URL shortening tools available in Shortly.",
+    url: "/features",
+    siteName: "Shortly",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
 import MarketingPage from "@/components/marketing/MarketingPage";
 
 export default function FeaturesPage() {
