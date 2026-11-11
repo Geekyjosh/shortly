@@ -1,3 +1,24 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "URL Shortening Solutions for Teams & Creators",
+  description: "Explore how marketers, creators and developers use Shortly to create clean short links and understand link performance.",
+  alternates: {
+    canonical: "/solutions",
+  },
+  openGraph: {
+    type: "website",
+    title: "URL Shortening Solutions for Teams & Creators | Shortly",
+    description: "Explore how marketers, creators and developers use Shortly to create clean short links and understand link performance.",
+    url: "/solutions",
+    siteName: "Shortly",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
 import Link from "next/link";
 import { ArrowRight, Code2, Megaphone, UserRound } from "lucide-react";
 import SiteFooter from "@/components/layout/SiteFooter";
