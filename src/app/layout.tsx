@@ -14,36 +14,36 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://shortly.com";
+const appUrl = "https://shortly.nexviuslabs.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
 
   title: {
-    default: "Shortly - Short Links, Better Insights",
+    default: "Free URL Shortener & Link Management Tool | Shortly",
     template: "%s | Shortly",
   },
 
-  description: "Create, manage, share and analyze short links with Shortly.",
+  description:
+    "Shorten long URLs, create custom short links, track clicks and generate QR codes with Shortly, the simple link management platform by Nexvius Labs.",
 
   keywords: [
+    "free URL shortener",
     "URL shortener",
-    "short links",
+    "link shortener",
+    "short link generator",
+    "custom short links",
     "link management",
+    "URL tracking",
     "link analytics",
-    "QR codes",
-    "link tracking",
+    "click tracking",
+    "QR code generator",
     "Shortly",
   ],
 
   applicationName: "Shortly",
 
-  authors: [
-    {
-      name: "Nexvius Labs",
-    },
-  ],
-
+  authors: [{ name: "Nexvius Labs", url: "https://nexviuslabs.com" }],
   creator: "Nexvius Labs",
   publisher: "Nexvius Labs",
 
@@ -58,23 +58,31 @@ export const metadata: Metadata = {
 
   openGraph: {
     type: "website",
-    url: "/",
+    url: appUrl,
     siteName: "Shortly",
-    title: "Shortly — Short Links, Better Insights",
+    title: "Free URL Shortener & Link Management Tool | Shortly",
     description:
-      "Create, manage, share and understand your short links from one place.",
+      "Create clean short URLs, manage links, track clicks and generate QR codes from one simple workspace.",
+    locale: "en_US",
   },
 
   twitter: {
-    card: "summary_large_image",
-    title: "Shortly — Short Links, Better Insights",
+    card: "summary",
+    title: "Free URL Shortener & Link Management Tool | Shortly",
     description:
-      "Create, manage, share and understand your short links from one place.",
+      "Create clean short URLs, manage links, track clicks and generate QR codes with Shortly.",
   },
 
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
 };
 
@@ -94,6 +102,36 @@ export const viewport: Viewport = {
   ],
 };
 
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Nexvius Labs",
+  url: "https://nexviuslabs.com",
+  logo: "https://shortly.nexviuslabs.com/logo.png",
+  sameAs: ["https://nexviuslabs.com"],
+};
+
+const softwareSchema = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Shortly",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  url: appUrl,
+  description:
+    "A URL shortener and link management platform for creating custom short links, tracking clicks and generating QR codes.",
+  publisher: {
+    "@type": "Organization",
+    name: "Nexvius Labs",
+    url: "https://nexviuslabs.com",
+  },
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+  },
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -110,6 +148,13 @@ export default function RootLayout({
           {children}
           <InstallPrompt />
         </ThemeProvider>
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify([organizationSchema, softwareSchema]).replace(/</g, "\\u003c"),
+          }}
+        />
       </body>
     </html>
   );
