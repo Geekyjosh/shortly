@@ -1,3 +1,24 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "URL Shortener for Marketing Campaigns",
+  description: "Create trackable campaign links, use memorable short URLs and measure clicks across your marketing channels with Shortly.",
+  alternates: {
+    canonical: "/solutions/marketing",
+  },
+  openGraph: {
+    type: "website",
+    title: "URL Shortener for Marketing Campaigns | Shortly",
+    description: "Create trackable campaign links, use memorable short URLs and measure clicks across your marketing channels with Shortly.",
+    url: "/solutions/marketing",
+    siteName: "Shortly",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
 import MarketingPage from "@/components/marketing/MarketingPage";
 
 export default function MarketingSolutionPage() {
