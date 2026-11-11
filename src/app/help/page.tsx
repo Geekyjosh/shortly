@@ -1,3 +1,24 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Shortly Help Center",
+  description: "Find help with creating short links, managing URLs, understanding click analytics and generating QR codes in Shortly.",
+  alternates: {
+    canonical: "/help",
+  },
+  openGraph: {
+    type: "website",
+    title: "Shortly Help Center | Shortly",
+    description: "Find help with creating short links, managing URLs, understanding click analytics and generating QR codes in Shortly.",
+    url: "/help",
+    siteName: "Shortly",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
 import Link from "next/link";
 import {
   ArrowRight,
