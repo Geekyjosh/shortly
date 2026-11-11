@@ -1,3 +1,24 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Short Link Management Tool",
+  description: "Create, edit, organize, disable and manage all your short URLs from one clear dashboard with Shortly.",
+  alternates: {
+    canonical: "/link-management",
+  },
+  openGraph: {
+    type: "website",
+    title: "Short Link Management Tool | Shortly",
+    description: "Create, edit, organize, disable and manage all your short URLs from one clear dashboard with Shortly.",
+    url: "/link-management",
+    siteName: "Shortly",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
 import MarketingPage from "@/components/marketing/MarketingPage";
 
 export default function LinkManagementPage() {
