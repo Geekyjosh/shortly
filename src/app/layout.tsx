@@ -108,7 +108,6 @@ const organizationSchema = {
   name: "Nexvius Labs",
   url: "https://nexviuslabs.com",
   logo: "https://shortly.nexviuslabs.com/logo.png",
-  sameAs: ["https://nexviuslabs.com"],
 };
 
 const softwareSchema = {
