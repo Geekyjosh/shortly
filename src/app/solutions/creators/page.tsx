@@ -1,3 +1,24 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Link Shortener for Content Creators",
+  description: "Create clean, memorable short links for social bios, posts, newsletters and communities, then track link engagement with Shortly.",
+  alternates: {
+    canonical: "/solutions/creators",
+  },
+  openGraph: {
+    type: "website",
+    title: "Link Shortener for Content Creators | Shortly",
+    description: "Create clean, memorable short links for social bios, posts, newsletters and communities, then track link engagement with Shortly.",
+    url: "/solutions/creators",
+    siteName: "Shortly",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
 import MarketingPage from "@/components/marketing/MarketingPage";
 
 export default function CreatorSolutionPage() {
