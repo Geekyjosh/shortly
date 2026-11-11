@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   },
 
   description:
-    "Shorten long URLs, create custom short links, track clicks and generate QR codes with Shortly, the simple link management platform by Nexvius Labs.",
+    "Use Shortly as a free URL shortener to create custom short links, track clicks and generate QR codes from one simple link management dashboard.",
 
   keywords: [
     "free URL shortener",
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     siteName: "Shortly",
     title: "Free URL Shortener & Link Management Tool | Shortly",
     description:
-      "Create clean short URLs, manage links, track clicks and generate QR codes from one simple workspace.",
+      "Shorten long URLs for free, create custom short links, track clicks and generate QR codes from one simple link management dashboard.",
     locale: "en_US",
   },
 
@@ -70,7 +70,7 @@ export const metadata: Metadata = {
     card: "summary",
     title: "Free URL Shortener & Link Management Tool | Shortly",
     description:
-      "Create clean short URLs, manage links, track clicks and generate QR codes with Shortly.",
+      "Use Shortly as a free URL shortener to create custom short links, track clicks and generate QR codes.",
   },
 
   robots: {
