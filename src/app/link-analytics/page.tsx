@@ -1,3 +1,24 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "URL & Link Click Analytics",
+  description: "Track short link clicks, see geographic activity and understand traffic sources with Shortly link analytics.",
+  alternates: {
+    canonical: "/link-analytics",
+  },
+  openGraph: {
+    type: "website",
+    title: "URL & Link Click Analytics | Shortly",
+    description: "Track short link clicks, see geographic activity and understand traffic sources with Shortly link analytics.",
+    url: "/link-analytics",
+    siteName: "Shortly",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
 import MarketingPage from "@/components/marketing/MarketingPage";
 
 export default function LinkAnalyticsPage() {
