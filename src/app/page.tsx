@@ -206,8 +206,8 @@ export default function Home() {
                 </h1>
 
                 <p className="mt-6 max-w-xl text-lg leading-8 shortly-muted">
-                  Create cleaner URLs, share them anywhere, and understand what
-                  happens after every click.
+                  Shorten long URLs for free, create custom short links, and
+                  track clicks from one simple link management dashboard.
                 </p>
 
                 <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -581,6 +581,54 @@ export default function Home() {
           </div>
         </section>
 
+        <section className="border-y border-[var(--border)]">
+          <div className="shortly-container shortly-section">
+            <div className="max-w-2xl">
+              <p className="shortly-eyebrow">Frequently asked questions</p>
+              <h2 className="mt-4 text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">
+                About Shortly and shortening links
+              </h2>
+              <p className="mt-5 text-base leading-7 shortly-muted">
+                A few practical answers about creating short URLs, managing
+                them and understanding the activity they receive.
+              </p>
+            </div>
+
+            <div className="mt-10 grid gap-x-12 md:grid-cols-2">
+              <FaqItem
+                question="What is a URL shortener?"
+                answer="A URL shortener turns a long web address into a shorter link that is easier to share. When someone opens the short link, they are redirected to the original destination."
+              />
+              <FaqItem
+                question="Can I shorten a URL for free with Shortly?"
+                answer="Yes. Shortly is currently available without a paid subscription. Guest users can create a limited number of links, while an account lets you keep and manage your links from the dashboard."
+              />
+              <FaqItem
+                question="Can I customize the ending of a short link?"
+                answer="Yes. When creating a link, you can enter an optional custom alias instead of using an automatically generated code. The alias must be available."
+              />
+              <FaqItem
+                question="Can I track clicks on my short links?"
+                answer="Shortly provides link-level click activity, with geographic and referrer information where available. Visit the link analytics page to learn more about the reporting tools."
+                href="/link-analytics"
+                linkLabel="Explore link analytics"
+              />
+              <FaqItem
+                question="Can I create a QR code from a short link?"
+                answer="Yes. Shortly can generate a QR code from your short link, making the same destination easier to share on printed materials, packaging, presentations and screens."
+                href="/qr-code-generator"
+                linkLabel="Explore the QR code generator"
+              />
+              <FaqItem
+                question="Can I manage or disable a short link later?"
+                answer="Yes. Your dashboard includes link management controls for editing and organizing links, changing their active status and managing expiration."
+                href="/link-management"
+                linkLabel="Explore link management"
+              />
+            </div>
+          </div>
+        </section>
+
         <section className="shortly-section">
           <div className="shortly-container">
             <div
@@ -631,6 +679,34 @@ export default function Home() {
 
       <SiteFooter />
     </div>
+  );
+}
+
+function FaqItem({
+  question,
+  answer,
+  href,
+  linkLabel,
+}: {
+  question: string;
+  answer: string;
+  href?: string;
+  linkLabel?: string;
+}) {
+  return (
+    <article className="border-b border-[var(--border)] py-6">
+      <h3 className="text-lg font-semibold tracking-[-0.02em]">{question}</h3>
+      <p className="mt-3 text-sm leading-7 shortly-muted">{answer}</p>
+      {href && linkLabel && (
+        <Link
+          href={href}
+          className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-blue-500 hover:text-blue-400"
+        >
+          {linkLabel}
+          <ArrowRight className="h-4 w-4" />
+        </Link>
+      )}
+    </article>
   );
 }
 
