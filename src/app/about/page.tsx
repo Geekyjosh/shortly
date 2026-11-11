@@ -1,3 +1,24 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "About Shortly – A Nexvius Labs Product",
+  description: "Learn about Shortly, the link management product from Nexvius Labs for creating, sharing and understanding short URLs.",
+  alternates: {
+    canonical: "/about",
+  },
+  openGraph: {
+    type: "website",
+    title: "About Shortly – A Nexvius Labs Product | Shortly",
+    description: "Learn about Shortly, the link management product from Nexvius Labs for creating, sharing and understanding short URLs.",
+    url: "/about",
+    siteName: "Shortly",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
 import SiteFooter from "@/components/layout/SiteFooter";
 import SiteHeader from "@/components/layout/SiteHeader";
 
