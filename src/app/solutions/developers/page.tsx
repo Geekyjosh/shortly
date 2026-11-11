@@ -1,3 +1,19 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "URL Shortening for Developers",
+  description: "Use Shortly for short URL redirects, link lifecycle controls and click visibility in modern product workflows.",
+  alternates: { canonical: "/solutions/developers" },
+  openGraph: {
+    type: "website",
+    title: "URL Shortening for Developers | Shortly",
+    description: "Use Shortly for short URL redirects, link lifecycle controls and click visibility in modern product workflows.",
+    url: "/solutions/developers",
+    siteName: "Shortly",
+  },
+  robots: { index: true, follow: true },
+};
+
 import MarketingPage from "@/components/marketing/MarketingPage";
 
 export default function DeveloperSolutionPage() {
