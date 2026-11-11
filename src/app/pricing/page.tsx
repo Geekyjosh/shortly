@@ -1,3 +1,24 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Pricing – Free Link Shortener",
+  description: "Explore Shortly pricing. Create and manage short links with the features currently available on the free plan.",
+  alternates: {
+    canonical: "/pricing",
+  },
+  openGraph: {
+    type: "website",
+    title: "Pricing – Free Link Shortener | Shortly",
+    description: "Explore Shortly pricing. Create and manage short links with the features currently available on the free plan.",
+    url: "/pricing",
+    siteName: "Shortly",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
 import Link from "next/link";
 import { Check } from "lucide-react";
 import SiteFooter from "@/components/layout/SiteFooter";
