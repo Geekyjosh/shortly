@@ -1,3 +1,24 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "QR Code Generator for Short Links",
+  description: "Generate QR codes from Shortly short links and share destinations across print, events, packaging and digital channels.",
+  alternates: {
+    canonical: "/qr-code-generator",
+  },
+  openGraph: {
+    type: "website",
+    title: "QR Code Generator for Short Links | Shortly",
+    description: "Generate QR codes from Shortly short links and share destinations across print, events, packaging and digital channels.",
+    url: "/qr-code-generator",
+    siteName: "Shortly",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
 import MarketingPage from "@/components/marketing/MarketingPage";
 
 export default function QrCodeGeneratorPage() {
