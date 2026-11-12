@@ -242,7 +242,6 @@ export default function AnalyticsPage() {
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] shortly-subtle">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
                   Workspace / Performance
                 </div>
                 <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Analytics</h1>
