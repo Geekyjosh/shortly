@@ -57,9 +57,23 @@ export default function DeveloperSolutionPage() {
         },
         {
           icon: "sparkles",
-          title: "API-ready direction",
+          title: "Short-link redirects",
           description:
-            "The product architecture is already moving toward API-first workflows.",
+            "Use Shortly URLs as redirect destinations across websites, applications, documentation and product messages.",
+        },
+      ]}
+      faqs={[
+        {
+          question: "Can I use a Shortly link inside a website or application?",
+          answer: "Yes. A Shortly short URL can be used anywhere a normal web link is accepted, including websites, applications, documentation and product messages.",
+        },
+        {
+          question: "Can I change the destination without changing the short URL?",
+          answer: "Yes. Link owners can update a destination from the Shortly dashboard while keeping the existing short URL in place.",
+        },
+        {
+          question: "Does Shortly currently provide a public developer API?",
+          answer: "Shortly's current public workflow is based on creating and managing links through its web dashboard. Do not rely on public API access unless it is explicitly made available in the product documentation.",
         },
       ]}
       closingTitle="Build on top of a working link foundation."
