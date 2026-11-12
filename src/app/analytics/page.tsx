@@ -4,11 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Activity,
-  ArrowDownRight,
-  ArrowUpRight,
   BarChart3,
   CalendarDays,
-  CheckCircle2,
   ChevronRight,
   ExternalLink,
   Globe2,
