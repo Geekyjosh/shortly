@@ -190,7 +190,7 @@ export default function UtmBuilderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+    <div data-workspace-form className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <SiteHeader />
 
       <main>
@@ -313,6 +313,29 @@ export default function UtmBuilderPage() {
                       className="shortly-input"
                     />
                   </Field>
+                </div>
+
+                <div className="-mt-2 flex flex-wrap items-center gap-2">
+                  <span className="mr-1 text-sm font-medium shortly-muted">Quick presets</span>
+                  {[
+                    { label: "LinkedIn", source: "linkedin", medium: "social" },
+                    { label: "Instagram", source: "instagram", medium: "social" },
+                    { label: "Google", source: "google", medium: "cpc" },
+                    { label: "Newsletter", source: "newsletter", medium: "email" },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => {
+                        setSource(preset.source);
+                        setMedium(preset.medium);
+                        setShortUrl("");
+                      }}
+                      className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium shortly-muted transition hover:border-blue-500 hover:text-[var(--foreground)]"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
                 </div>
 
                 <Field
