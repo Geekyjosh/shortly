@@ -235,41 +235,12 @@ export default function BulkShortenerPage() {
               </Link>
             </div>
 
-            <nav className="mt-9 flex gap-1 overflow-x-auto border-b border-[var(--border)]">
-              <Link
-                href="/dashboard"
-                className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]"
-              >
-                Links
-              </Link>
-
-              <Link
-                href="/analytics"
-                className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]"
-              >
-                Analytics
-              </Link>
-
-              <Link
-                href="/dashboard/create"
-                className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]"
-              >
-                Create
-              </Link>
-
-              <Link
-                href="/dashboard/bulk"
-                className="relative whitespace-nowrap px-4 pb-3 pt-2 text-sm font-semibold"
-              >
-                Bulk
-                <span className="absolute inset-x-4 bottom-[-1px] h-0.5 bg-blue-500" />
-              </Link>
-              <Link
-                href="/dashboard/utm"
-                className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]"
-              >
-                UTM Builder
-              </Link>
+            <nav className="mt-9 flex gap-1 overflow-x-auto border-b border-[var(--border)]" aria-label="Workspace navigation">
+              <Link href="/dashboard" className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]">Links</Link>
+              <Link href="/analytics" className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]">Analytics</Link>
+              <Link href="/dashboard/create" className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]">Create</Link>
+              <Link href="/dashboard/bulk" aria-current="page" className="relative whitespace-nowrap px-4 pb-3 pt-2 text-sm font-semibold">Bulk tools<span className="absolute inset-x-4 bottom-[-1px] h-0.5 bg-blue-500" /></Link>
+              <Link href="/dashboard/utm" className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]">UTM builder</Link>
             </nav>
           </div>
         </section>
