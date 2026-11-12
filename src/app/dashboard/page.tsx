@@ -346,7 +346,7 @@ export default function Dashboard() {
 
   if (!loggedIn && loading) {
     return (
-      <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+      <div data-workspace-form className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
         <SiteHeader />
         <main className="shortly-container flex min-h-[62vh] items-center justify-center">
           <div className="text-center">
