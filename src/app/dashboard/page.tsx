@@ -381,7 +381,6 @@ export default function Dashboard() {
       <main className="shortly-container pb-12 pt-6 sm:pt-8">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs font-medium shortly-muted">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
             Workspace <span className="shortly-subtle">/</span> Link library
           </div>
           <button type="button" onClick={loadUrls} disabled={loading} className="inline-flex h-9 items-center gap-2 rounded-lg border border-[var(--border)] px-3 text-xs font-semibold shortly-muted transition hover:bg-[var(--surface)] hover:text-[var(--foreground)] disabled:opacity-50">
