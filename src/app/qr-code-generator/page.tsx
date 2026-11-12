@@ -72,6 +72,20 @@ export default function QrCodeGeneratorPage() {
             "Move from a created short link to a QR-ready workflow quickly.",
         },
       ]}
+      faqs={[
+        {
+          question: "How do I create a QR code with Shortly?",
+          answer: "Create a short link in Shortly, then use the QR code option associated with that link to generate a scannable code for its destination.",
+        },
+        {
+          question: "Where can I use a Shortly QR code?",
+          answer: "You can place QR codes on posters, product packaging, business cards, event materials, presentations and other printed or digital content.",
+        },
+        {
+          question: "Can I change the destination after printing the QR code?",
+          answer: "If the QR code points to a Shortly short link, you can update that link's destination from your dashboard without changing the printed code.",
+        },
+      ]}
       closingTitle="Make every short link easier to access."
       closingDescription="Create a Shortly URL and turn it into a QR code whenever the context calls for scanning instead of typing."
     />
