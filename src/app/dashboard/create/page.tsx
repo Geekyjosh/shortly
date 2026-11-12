@@ -135,7 +135,7 @@ export default function CreateLinkPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+    <div data-workspace-form className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <SiteHeader />
 
       {toast && (
@@ -320,6 +320,37 @@ export default function CreateLinkPage() {
                     onChange={(event) => setExpiresAt(event.target.value)}
                     className="shortly-input"
                   />
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {[
+                      { label: "24 hours", days: 1 },
+                      { label: "7 days", days: 7 },
+                      { label: "30 days", days: 30 },
+                    ].map((option) => (
+                      <button
+                        key={option.days}
+                        type="button"
+                        onClick={() => {
+                          const date = new Date();
+                          date.setDate(date.getDate() + option.days);
+                          const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+                            .toISOString()
+                            .slice(0, 16);
+                          setExpiresAt(localDate);
+                        }}
+                        className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium shortly-muted transition hover:border-blue-500 hover:text-[var(--foreground)]"
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setExpiresAt("")}
+                      className="rounded-lg px-3 py-2 text-sm font-medium text-blue-600 transition hover:bg-[var(--brand-soft)]"
+                    >
+                      No expiry
+                    </button>
+                  </div>
 
                   <p className="mt-2 text-xs shortly-subtle">
                     Leave this empty if the link should remain active
