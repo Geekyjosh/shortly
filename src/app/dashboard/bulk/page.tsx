@@ -291,7 +291,7 @@ export default function BulkShortenerPage() {
                             setMessage("Your clipboard is empty.");
                             return;
                           }
-                          setInput((current) => [current.trim(), pasted.trim()].filter(Boolean).join("\\n"));
+                          setInput((current) => [current.trim(), pasted.trim()].filter(Boolean).join("\n"));
                           setMessage("URLs pasted from clipboard.");
                         } catch {
                           setMessage("Clipboard access was blocked. Paste directly into the field instead.");
@@ -305,7 +305,7 @@ export default function BulkShortenerPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        setInput("https://example.com/product\\nhttps://github.com\\nhttps://openai.com");
+                        setInput("https://example.com/product\nhttps://github.com\nhttps://openai.com");
                         setMessage("Sample URLs loaded. Replace them with your destinations before shortening.");
                         setResults([]);
                       }}
