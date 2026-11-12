@@ -67,6 +67,20 @@ export default function CreatorSolutionPage() {
             "Create a link and get it in front of your audience quickly.",
         },
       ]}
+      faqs={[
+        {
+          question: "How can content creators use short links?",
+          answer: "Creators can use short URLs in social bios, video descriptions, posts, newsletters, community messages and event materials to make destinations easier to share.",
+        },
+        {
+          question: "Can I create a custom link for a project or post?",
+          answer: "Yes. Shortly supports custom aliases, so you can choose a readable ending for a link when that alias is available.",
+        },
+        {
+          question: "Can I see how many people clicked a shared link?",
+          answer: "Yes. Shortly records link click activity and provides available geographic and referrer context in the analytics dashboard.",
+        },
+      ]}
       closingTitle="Spend less time managing links."
       closingDescription="Create short URLs that look better wherever you share them."
     />
