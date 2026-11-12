@@ -72,6 +72,20 @@ export default function LinkManagementPage() {
             "Copy, share and open links directly from the management view.",
         },
       ]}
+      faqs={[
+        {
+          question: "Can I edit a short link after creating it?",
+          answer: "Yes. You can update the destination URL from your dashboard without needing to share a replacement short link.",
+        },
+        {
+          question: "Can I temporarily stop a short link from working?",
+          answer: "Yes. Link status controls let you disable a link and reactivate it when you need it again.",
+        },
+        {
+          question: "Can I set an expiration date for a short URL?",
+          answer: "Yes. You can configure an expiration date for links that should only remain active for a defined period.",
+        },
+      ]}
       closingTitle="Your links should be easy to manage."
       closingDescription="Create an account and keep every Shortly link accessible from one clean workspace."
     />
