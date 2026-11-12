@@ -16,17 +16,12 @@ const footerGroups = [
     ],
   },
   {
-    title: "Resources",
+    title: "Explore",
     links: [
       { label: "Solutions", href: "/solutions" },
       { label: "Help centre", href: "/help" },
       { label: "Pricing", href: "/pricing" },
       { label: "Developers", href: "/solutions/developers" },
-    ],
-  },
-  {
-    title: "Company",
-    links: [
       { label: "About Shortly", href: "/about" },
       { label: "Privacy policy", href: "/privacy" },
       { label: "Terms of service", href: "/terms" },
@@ -66,7 +61,7 @@ export default function SiteFooter() {
             <p className="mt-6 text-xs shortly-subtle">A link workflow that stays clear from creation to click.</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 sm:gap-8">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:gap-10">
             {footerGroups.map((group) => (
               <div key={group.title} className="min-w-0">
                 <h3 className="text-xs font-bold uppercase tracking-[0.12em]">{group.title}</h3>
