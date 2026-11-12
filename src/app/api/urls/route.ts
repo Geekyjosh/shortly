@@ -1,6 +1,4 @@
 import { randomUUID } from "crypto";
-import { lookup } from "dns/promises";
-import { isIP } from "net";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/auth";
@@ -76,95 +74,6 @@ function isValidAlias(alias: string) {
   return /^[a-zA-Z0-9_-]+$/.test(alias);
 }
 
-function isPrivateIPv4(ip: string) {
-  const parts = ip.split(".").map(Number);
-
-  if (
-    parts.length !== 4 ||
-    parts.some((part) => Number.isNaN(part) || part < 0 || part > 255)
-  ) {
-    return true;
-  }
-
-  const [a, b] = parts;
-
-  return (
-    a === 0 ||
-    a === 10 ||
-    a === 127 ||
-    (a === 100 && b >= 64 && b <= 127) ||
-    (a === 169 && b === 254) ||
-    (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && b === 168) ||
-    a >= 224
-  );
-}
-
-function isPrivateIPv6(ip: string) {
-  const normalized = ip.toLowerCase();
-
-  return (
-    normalized === "::" ||
-    normalized === "::1" ||
-    normalized.startsWith("fc") ||
-    normalized.startsWith("fd") ||
-    normalized.startsWith("fe8") ||
-    normalized.startsWith("fe9") ||
-    normalized.startsWith("fea") ||
-    normalized.startsWith("feb") ||
-    normalized.startsWith("::ffff:127.") ||
-    normalized.startsWith("::ffff:10.") ||
-    normalized.startsWith("::ffff:192.168.")
-  );
-}
-
-function isPrivateIp(ip: string) {
-  const version = isIP(ip);
-
-  if (version === 4) {
-    return isPrivateIPv4(ip);
-  }
-
-  if (version === 6) {
-    return isPrivateIPv6(ip);
-  }
-
-  return true;
-}
-
-async function validatePublicHostname(hostname: string) {
-  const normalizedHostname = hostname.toLowerCase();
-
-  if (
-    normalizedHostname === "localhost" ||
-    normalizedHostname.endsWith(".localhost") ||
-    normalizedHostname.endsWith(".local") ||
-    normalizedHostname.endsWith(".internal") ||
-    normalizedHostname === "0.0.0.0"
-  ) {
-    return false;
-  }
-
-  if (isIP(normalizedHostname)) {
-    return !isPrivateIp(normalizedHostname);
-  }
-
-  try {
-    const addresses = await lookup(normalizedHostname, {
-      all: true,
-      verbatim: true,
-    });
-
-    if (addresses.length === 0) {
-      return false;
-    }
-
-    return addresses.every((address) => !isPrivateIp(address.address));
-  } catch {
-    return false;
-  }
-}
-
 type DestinationValidation =
   | {
       valid: true;
@@ -175,42 +84,23 @@ type DestinationValidation =
       error: string;
     };
 
-async function requestDestination(url: URL, method: "HEAD" | "GET") {
-  const controller = new AbortController();
-
-  const timeout = setTimeout(() => {
-    controller.abort();
-  }, 8000);
-
-  try {
-    return await fetch(url.toString(), {
-      method,
-      redirect: "manual",
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "Shortly-Link-Validator/1.0",
-        Accept:
-          "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
-        ...(method === "GET"
-          ? {
-              Range: "bytes=0-0",
-            }
-          : {}),
-      },
-      cache: "no-store",
-    });
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
+/*
+ * Validate the URL format without requesting the destination.
+ *
+ * Some legitimate sites (including LinkedIn) block automated HEAD/GET
+ * requests or return bot-protection errors. A URL shortener should not
+ * reject a destination just because its server cannot preview it.
+ *
+ * Shortly redirects visitors directly to the saved URL; it does not fetch
+ * the destination from the server, so a reachability request is unnecessary.
+ */
 async function validateDestinationUrl(
   value: string,
 ): Promise<DestinationValidation> {
-  let currentUrl: URL;
+  let destination: URL;
 
   try {
-    currentUrl = new URL(value);
+    destination = new URL(value);
   } catch {
     return {
       valid: false,
@@ -218,158 +108,30 @@ async function validateDestinationUrl(
     };
   }
 
-  if (!["http:", "https:"].includes(currentUrl.protocol)) {
+  if (!["http:", "https:"].includes(destination.protocol)) {
     return {
       valid: false,
       error: "Only HTTP and HTTPS URLs are supported.",
     };
   }
 
-  if (currentUrl.username || currentUrl.password) {
+  if (destination.username || destination.password) {
     return {
       valid: false,
       error: "URLs containing usernames or passwords are not supported.",
     };
   }
 
-  const maximumRedirects = 5;
-
-  for (
-    let redirectCount = 0;
-    redirectCount <= maximumRedirects;
-    redirectCount++
-  ) {
-    const publicHostname = await validatePublicHostname(currentUrl.hostname);
-
-    if (!publicHostname) {
-      return {
-        valid: false,
-        error: "This URL cannot be reached or points to a private address.",
-      };
-    }
-
-    let response: Response;
-
-    try {
-      response = await requestDestination(currentUrl, "HEAD");
-
-      /*
-       * Some websites do not support HEAD,
-       * even though the destination exists.
-       */
-      if (response.status === 405 || response.status === 501) {
-        await response.body?.cancel();
-
-        response = await requestDestination(currentUrl, "GET");
-      }
-    } catch (error) {
-      if (error instanceof Error && error.name === "AbortError") {
-        return {
-          valid: false,
-          error: "The destination website took too long to respond.",
-        };
-      }
-
-      /*
-       * Some hosts behave differently for HEAD,
-       * so make one lightweight GET attempt.
-       */
-      try {
-        response = await requestDestination(currentUrl, "GET");
-      } catch (fallbackError) {
-        if (
-          fallbackError instanceof Error &&
-          fallbackError.name === "AbortError"
-        ) {
-          return {
-            valid: false,
-            error: "The destination website took too long to respond.",
-          };
-        }
-
-        return {
-          valid: false,
-          error: "The destination website could not be reached.",
-        };
-      }
-    }
-
-    if (response.status >= 300 && response.status < 400) {
-      const location = response.headers.get("location");
-
-      await response.body?.cancel();
-
-      if (!location) {
-        return {
-          valid: false,
-          error: "The destination returned an invalid redirect.",
-        };
-      }
-
-      try {
-        currentUrl = new URL(location, currentUrl);
-      } catch {
-        return {
-          valid: false,
-          error: "The destination returned an invalid redirect.",
-        };
-      }
-
-      if (!["http:", "https:"].includes(currentUrl.protocol)) {
-        return {
-          valid: false,
-          error: "The destination redirects to an unsupported URL.",
-        };
-      }
-
-      continue;
-    }
-
-    await response.body?.cancel();
-
-    if (response.status === 404 || response.status === 410) {
-      return {
-        valid: false,
-        error: "The destination page does not exist.",
-      };
-    }
-
-    /*
-     * 401 and 403 still mean the website exists.
-     * The page may simply require authentication
-     * or block automated requests.
-     */
-    if (response.status === 401 || response.status === 403) {
-      return {
-        valid: true,
-        normalizedUrl: currentUrl.toString(),
-      };
-    }
-
-    if (response.status >= 500) {
-      return {
-        valid: false,
-        error:
-          "The destination website is currently unavailable. Please try again later.",
-      };
-    }
-
-    if (response.status >= 400) {
-      return {
-        valid: false,
-        error: "The destination website rejected the request.",
-      };
-    }
-
+  if (!destination.hostname || !destination.hostname.includes(".")) {
     return {
-      valid: true,
-      normalizedUrl: currentUrl.toString(),
+      valid: false,
+      error: "Please provide a valid public website URL.",
     };
   }
 
   return {
-    valid: false,
-    error: "The destination has too many redirects.",
+    valid: true,
+    normalizedUrl: destination.toString(),
   };
 }
 
