@@ -72,6 +72,20 @@ export default function FeaturesPage() {
             "Keep every link organized and accessible from one dashboard.",
         },
       ]}
+      faqs={[
+        {
+          question: "What can I do with Shortly?",
+          answer: "Shortly lets you shorten long URLs, choose custom aliases, manage link status and expiration, track link activity and generate QR codes from your short links.",
+        },
+        {
+          question: "Can I create a short link without registering?",
+          answer: "Yes. You can create a limited number of links as a guest. Creating an account gives you a dashboard to keep and manage your links.",
+        },
+        {
+          question: "Can I change a destination after sharing its short link?",
+          answer: "Yes. You can edit the destination from your account dashboard while keeping the same short URL.",
+        },
+      ]}
       closingTitle="A simpler way to manage what you share."
       closingDescription="Start with one short link today and keep everything organized as your link library grows."
     />
