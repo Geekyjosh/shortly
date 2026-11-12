@@ -354,3 +354,15 @@ svg {
     box-shadow: var(--shadow-soft);
   }
 }
+
+
+/* Authentication pages */
+[data-auth-page] p { font-size: 1rem; line-height: 1.7; }
+[data-auth-page] .shortly-eyebrow { font-size: 0.8125rem; line-height: 1.4; }
+[data-auth-page] .auth-input { min-height: 54px; font-size: 1rem; }
+[data-auth-page] .shortly-button-primary { min-height: 52px; font-size: 1rem; }
+[data-auth-page] label { font-size: 1rem; }
+@media (max-width: 1023px) {
+  [data-auth-page] main > .shortly-container { padding-block: 2rem; }
+  [data-auth-page] main > .shortly-container > div { min-height: auto; }
+}
