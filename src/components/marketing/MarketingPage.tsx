@@ -42,6 +42,11 @@ export type MarketingStat = {
   label: string;
 };
 
+export type MarketingFaq = {
+  question: string;
+  answer: string;
+};
+
 type MarketingPageProps = {
   eyebrow: string;
   title: string;
@@ -56,6 +61,7 @@ type MarketingPageProps = {
   };
   stats?: MarketingStat[];
   features: MarketingFeature[];
+  faqs?: MarketingFaq[];
   sectionEyebrow?: string;
   sectionTitle: string;
   sectionDescription: string;
@@ -90,6 +96,7 @@ export default function MarketingPage({
   },
   stats = [],
   features,
+  faqs = [],
   sectionEyebrow = "What you get",
   sectionTitle,
   sectionDescription,
@@ -247,6 +254,35 @@ export default function MarketingPage({
             </div>
           </div>
         </section>
+
+        {faqs.length > 0 && (
+          <section className="border-y border-[var(--border)]">
+            <div className="shortly-container shortly-section">
+              <div className="max-w-2xl">
+                <p className="shortly-eyebrow">Frequently asked questions</p>
+                <h2 className="mt-4 text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">
+                  Common questions
+                </h2>
+              </div>
+
+              <div className="mt-8 grid gap-x-12 md:grid-cols-2">
+                {faqs.map((faq) => (
+                  <article
+                    key={faq.question}
+                    className="border-b border-[var(--border)] py-6"
+                  >
+                    <h3 className="text-lg font-semibold tracking-[-0.02em]">
+                      {faq.question}
+                    </h3>
+                    <p className="mt-3 text-sm leading-7 shortly-muted">
+                      {faq.answer}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className="shortly-section">
           <div className="shortly-container">
