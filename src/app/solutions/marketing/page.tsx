@@ -67,6 +67,20 @@ export default function MarketingSolutionPage() {
             "Disable or update links when a campaign ends or changes.",
         },
       ]}
+      faqs={[
+        {
+          question: "How can marketers use Shortly?",
+          answer: "Marketers can create short URLs for campaigns, choose readable aliases, share links across channels and review the click activity each link receives.",
+        },
+        {
+          question: "Can I use one short link across multiple marketing channels?",
+          answer: "Yes. You can share a Shortly link in email, social posts, advertisements, landing pages and printed campaign materials. Use separate links when you need to compare individual placements.",
+        },
+        {
+          question: "Can I update a campaign link after publishing it?",
+          answer: "Yes. You can change the destination or disable a short link from your dashboard, while the short URL itself remains the same.",
+        },
+      ]}
       closingTitle="Make every campaign link easier to manage."
       closingDescription="Create cleaner campaign URLs and keep performance visible from one place."
     />
