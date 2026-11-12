@@ -310,6 +310,39 @@ svg {
   background: transparent;
 }
 
+/* Workspace form pages: stronger reading size and clearer controls. */
+[data-workspace-form] p {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+[data-workspace-form] p.text-xs,
+[data-workspace-form] .text-xs {
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+[data-workspace-form] label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+[data-workspace-form] .shortly-input {
+  min-height: 52px;
+  font-size: 1rem;
+}
+
+[data-workspace-form] textarea.shortly-input {
+  min-height: 300px;
+  line-height: 1.75;
+}
+
+[data-workspace-form] .shortly-button-primary,
+[data-workspace-form] .shortly-button-secondary {
+  min-height: 48px;
+  font-size: 0.9375rem;
+}
+
 .shortly-scrollbar::-webkit-scrollbar-thumb {
   background: var(--border-strong);
   border-radius: 999px;
