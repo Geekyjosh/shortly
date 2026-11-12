@@ -72,6 +72,20 @@ export default function LinkAnalyticsPage() {
             "Analytics are scoped to links that belong to your account.",
         },
       ]}
+      faqs={[
+        {
+          question: "What can I see in Shortly link analytics?",
+          answer: "Shortly provides link click activity, geographic information and referrer data where the visitor's browser makes it available.",
+        },
+        {
+          question: "Can I compare the performance of different short links?",
+          answer: "Yes. Your dashboard helps you review link activity and identify which of your links are receiving more clicks.",
+        },
+        {
+          question: "Does link analytics identify individual visitors?",
+          answer: "No. Analytics are intended to show aggregate activity and available visit context, not reveal the personal identity of each person who clicks.",
+        },
+      ]}
       closingTitle="Make link decisions with better context."
       closingDescription="Create links, share them, then come back to see which ones are actually getting attention."
     />
