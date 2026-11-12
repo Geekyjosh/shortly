@@ -9,6 +9,9 @@ import {
   ExternalLink,
   Link2,
   MoreHorizontal,
+  RefreshCw,
+  ArrowUpRight,
+  CalendarDays,
   MousePointerClick,
   Pencil,
   Plus,
@@ -340,476 +343,204 @@ export default function Dashboard() {
 
   const shareItem = urls.find((item) => item.id === shareId);
 
+
   if (!loggedIn && loading) {
     return (
       <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
         <SiteHeader />
-
-        <main className="flex min-h-[70vh] items-center justify-center">
+        <main className="shortly-container flex min-h-[62vh] items-center justify-center">
           <div className="text-center">
             <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[var(--border)] border-t-blue-500" />
-
-            <p className="mt-4 text-sm shortly-muted">
-              Loading your workspace...
-            </p>
+            <p className="mt-4 text-sm shortly-muted">Preparing your workspace...</p>
           </div>
         </main>
-
         <SiteFooter />
       </div>
     );
   }
+
+  const clickRate = urls.length ? Math.round((activeLinks / urls.length) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <SiteHeader />
 
       {toast && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="shortly-rise fixed right-4 top-20 z-[90] flex max-w-sm items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium shadow-xl"
-          style={{
-            borderColor: "var(--border)",
-            background: "var(--surface)",
-          }}
-        >
-          <span
-            className="flex h-6 w-6 items-center justify-center rounded-full"
-            style={{
-              background: "var(--brand-soft)",
-              color: "var(--brand)",
-            }}
-          >
-            <Check className="h-3.5 w-3.5" />
-          </span>
-
+        <div role="status" aria-live="polite" className="shortly-rise fixed right-4 top-20 z-[90] flex max-w-sm items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium shadow-xl" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+          <span className="flex h-6 w-6 items-center justify-center rounded-full" style={{ background: "var(--brand-soft)", color: "var(--brand)" }}><Check className="h-3.5 w-3.5" /></span>
           {toast}
         </div>
       )}
 
-      <ShareModal
-        url={shareItem ? `${origin}/${shareItem.shortCode}` : ""}
-        open={Boolean(shareItem)}
-        onClose={() => setShareId(null)}
-      />
+      <ShareModal url={shareItem ? `${origin}/${shareItem.shortCode}` : ""} open={Boolean(shareItem)} onClose={() => setShareId(null)} />
 
       {editItem && (
-        <EditModal
-          item={editItem}
-          host={host}
-          saving={savingEdit}
-          onSave={saveEdit}
-          onClose={() => {
-            if (!savingEdit) {
-              setEditItem(null);
-            }
-          }}
-        />
+        <EditModal item={editItem} host={host} saving={savingEdit} onSave={saveEdit} onClose={() => { if (!savingEdit) setEditItem(null); }} />
       )}
 
-      <main>
-        <section className="border-b border-[var(--border)]">
-          <div className="shortly-container py-10 sm:py-12">
-            <div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <p className="shortly-eyebrow">Workspace</p>
+      <main className="shortly-container pb-12 pt-6 sm:pt-8">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs font-medium shortly-muted">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            Workspace <span className="shortly-subtle">/</span> Link library
+          </div>
+          <button type="button" onClick={loadUrls} disabled={loading} className="inline-flex h-9 items-center gap-2 rounded-lg border border-[var(--border)] px-3 text-xs font-semibold shortly-muted transition hover:bg-[var(--surface)] hover:text-[var(--foreground)] disabled:opacity-50">
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh data
+          </button>
+        </div>
 
-                <h1 className="mt-3 text-4xl font-semibold tracking-[-0.035em] sm:text-5xl">
-                  Your links
-                </h1>
-
-                <p className="mt-3 max-w-2xl text-base shortly-muted">
-                  Create, organize and understand every Shortly link from one
-                  focused workspace.
-                </p>
+        <section className="overflow-hidden rounded-2xl bg-[#0b1730] text-white shadow-[0_12px_32px_rgba(2,6,23,.14)]">
+          <div className="grid gap-7 p-5 sm:p-7 lg:grid-cols-[1fr_300px] lg:items-center lg:p-8">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-md border border-blue-300/20 bg-blue-400/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.13em] text-blue-200">Your workspace</span>
+                <span className="text-[11px] text-slate-400">SHORTLY / LINKS</span>
               </div>
-
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Link href="/analytics" className="shortly-button-secondary">
-                  <BarChart3 className="h-4 w-4" />
-                  Analytics
-                </Link>
-
-                <Link
-                  href="/dashboard/create"
-                  className="shortly-button-primary"
-                >
-                  <Plus className="h-4 w-4" />
-                  Create link
-                </Link>
+              <h1 className="mt-4 text-3xl font-semibold tracking-[-0.045em] sm:text-[2.65rem]">Manage every link.<br className="hidden sm:block" /> See what gets clicked.</h1>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">Your links, activity and controls in one place. Pick up where you left off.</p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <Link href="/dashboard/create" className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-500"><Plus className="h-4 w-4" /> Create a link</Link>
+                <Link href="/analytics" className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/20 px-4 text-sm font-semibold text-white transition hover:bg-white/10"><BarChart3 className="h-4 w-4" /> View analytics</Link>
               </div>
             </div>
-
-            <nav className="mt-9 flex gap-1 overflow-x-auto border-b border-[var(--border)]">
-              <Link
-                href="/dashboard"
-                className="relative whitespace-nowrap px-4 pb-3 pt-2 text-sm font-semibold"
-              >
-                Links
-                <span className="absolute inset-x-4 bottom-[-1px] h-0.5 bg-blue-500" />
-              </Link>
-
-              <Link
-                href="/analytics"
-                className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]"
-              >
-                Analytics
-              </Link>
-
-              <Link
-                href="/dashboard/create"
-                className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]"
-              >
-                Create
-              </Link>
-              <Link
-                href="/dashboard/bulk"
-                className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]"
-              >
-                Bulk
-              </Link>
-              <Link
-                href="/dashboard/utm"
-                className="whitespace-nowrap px-4 pb-3 pt-2 text-sm font-medium shortly-muted hover:text-[var(--foreground)]"
-              >
-                UTM Builder
-              </Link>
-            </nav>
+            <div className="rounded-xl border border-white/10 bg-white/[0.05] p-4 sm:p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-200">Link availability</span>
+                <span className="font-mono text-xs text-blue-300">{clickRate}%</span>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+                <div className="h-full rounded-full bg-blue-500 transition-all duration-500" style={{ width: `${clickRate}%` }} />
+              </div>
+              <div className="mt-3 flex items-center justify-between text-xs">
+                <span className="text-slate-400">{activeLinks} active</span>
+                <span className="text-slate-400">{inactiveLinks} inactive</span>
+              </div>
+              <div className="mt-4 border-t border-white/10 pt-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Most clicked link</p>
+                {topLink ? (
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-white">/{topLink.shortCode}</p>
+                      <p className="mt-1 text-xs text-slate-400">{topLink.clicks.toLocaleString()} clicks</p>
+                    </div>
+                    <Link href={`/analytics?link=${topLink.id}`} aria-label="View top link analytics" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/15 text-blue-200 transition hover:bg-white/10"><ArrowUpRight className="h-4 w-4" /></Link>
+                  </div>
+                ) : <p className="mt-2 text-sm text-slate-400">Your best-performing link will appear here.</p>}
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 divide-x divide-white/10 border-t border-white/10">
+            <div className="px-4 py-3 sm:px-7"><p className="text-lg font-semibold">{urls.length.toLocaleString()}</p><p className="mt-0.5 text-[10px] text-slate-400 sm:text-xs">Total links</p></div>
+            <div className="px-4 py-3 sm:px-7"><p className="text-lg font-semibold">{totalClicks.toLocaleString()}</p><p className="mt-0.5 text-[10px] text-slate-400 sm:text-xs">All-time clicks</p></div>
+            <div className="px-4 py-3 sm:px-7"><p className="text-lg font-semibold">{activeLinks.toLocaleString()}</p><p className="mt-0.5 text-[10px] text-slate-400 sm:text-xs">Currently active</p></div>
           </div>
         </section>
 
-        <section className="shortly-container py-8 sm:py-10">
-          <div className="grid gap-px overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--border)] sm:grid-cols-2 xl:grid-cols-4">
-            <Stat
-              label="Total links"
-              value={urls.length.toLocaleString()}
-              helper={`${inactiveLinks} inactive`}
-              icon={Link2}
-            />
+        <nav aria-label="Workspace sections" className="mt-6 flex gap-1 overflow-x-auto border-b border-[var(--border)]">
+          <Link href="/dashboard" aria-current="page" className="relative whitespace-nowrap px-4 py-3 text-sm font-semibold text-[var(--foreground)]">Links<span className="absolute inset-x-4 bottom-0 h-0.5 bg-blue-600" /></Link>
+          <Link href="/analytics" className="whitespace-nowrap rounded-t-lg px-4 py-3 text-sm font-medium shortly-muted transition hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]">Analytics</Link>
+          <Link href="/dashboard/create" className="whitespace-nowrap rounded-t-lg px-4 py-3 text-sm font-medium shortly-muted transition hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]">Create</Link>
+          <Link href="/dashboard/bulk" className="whitespace-nowrap rounded-t-lg px-4 py-3 text-sm font-medium shortly-muted transition hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]">Bulk tools</Link>
+          <Link href="/dashboard/utm" className="whitespace-nowrap rounded-t-lg px-4 py-3 text-sm font-medium shortly-muted transition hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]">UTM builder</Link>
+        </nav>
 
-            <Stat
-              label="Total clicks"
-              value={totalClicks.toLocaleString()}
-              helper="Across all links"
-              icon={BarChart3}
-            />
+        <section className="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <Stat label="Total links" value={urls.length.toLocaleString()} helper={`${inactiveLinks} inactive`} icon={Link2} />
+          <Stat label="Total clicks" value={totalClicks.toLocaleString()} helper="Across all your links" icon={BarChart3} />
+          <Stat label="Active links" value={activeLinks.toLocaleString()} helper="Currently redirecting" icon={Zap} />
+          <Stat label="Top link clicks" value={topLink ? topLink.clicks.toLocaleString() : "0"} helper={topLink ? `/${topLink.shortCode}` : "No clicks recorded"} icon={MousePointerClick} />
+        </section>
 
-            <Stat
-              label="Active links"
-              value={activeLinks.toLocaleString()}
-              helper="Currently redirecting"
-              icon={Zap}
-            />
-
-            <Stat
-              label="Top link"
-              value={topLink ? topLink.clicks.toLocaleString() : "0"}
-              helper={topLink ? `/${topLink.shortCode}` : "No clicks yet"}
-              icon={MousePointerClick}
-            />
-          </div>
-
-          <section
-            className="mt-8 overflow-visible rounded-2xl border"
-            style={{
-              borderColor: "var(--border)",
-              background: "var(--surface)",
-            }}
-          >
-            <div className="border-b border-[var(--border)] p-4 sm:p-5">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <section className="mt-6 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+          <div className="border-b border-[var(--border)] p-4 sm:p-5">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="font-semibold">Link library</h2>
-
-                  <p className="mt-1 text-sm shortly-subtle">
-                    {filteredUrls.length} of {urls.length} links shown
-                  </p>
+                  <div className="flex items-center gap-2"><h2 className="text-base font-semibold">Your link library</h2><span className="rounded-md bg-[var(--surface-muted)] px-2 py-0.5 text-[10px] font-semibold shortly-muted">{urls.length}</span></div>
+                  <p className="mt-1 text-xs shortly-subtle">{filteredUrls.length} results · Search, filter and manage your URLs</p>
                 </div>
-
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <div className="relative min-w-0 sm:w-72">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 shortly-subtle" />
-
-                    <input
-                      type="search"
-                      value={search}
-                      onChange={(event) => setSearch(event.target.value)}
-                      placeholder="Search links..."
-                      className="shortly-input pl-10"
-                    />
-                  </div>
-
-                  <select
-                    value={statusFilter}
-                    onChange={(event) =>
-                      setStatusFilter(event.target.value as StatusFilter)
-                    }
-                    className="shortly-input sm:w-36"
-                    aria-label="Filter by status"
-                  >
-                    <option value="all">All status</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-
-                  <select
-                    value={sort}
-                    onChange={(event) =>
-                      setSort(event.target.value as SortOption)
-                    }
-                    className="shortly-input sm:w-40"
-                    aria-label="Sort links"
-                  >
-                    <option value="newest">Newest first</option>
-                    <option value="oldest">Oldest first</option>
-                    <option value="clicks">Most clicks</option>
-                  </select>
+                <Link href="/dashboard/create" className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white transition hover:bg-blue-700 sm:hidden"><Plus className="h-3.5 w-3.5" /> New</Link>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-[minmax(190px,1fr)_auto] xl:w-auto">
+                <div className="relative min-w-0 sm:w-64">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 shortly-subtle" />
+                  <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by URL or alias" className="shortly-input pl-10" />
                 </div>
+                <select value={sort} onChange={(event) => setSort(event.target.value as SortOption)} className="shortly-input sm:w-40" aria-label="Sort links">
+                  <option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="clicks">Most clicks</option>
+                </select>
               </div>
             </div>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {(["all", "active", "inactive"] as StatusFilter[]).map((status) => {
+                const count = status === "all" ? urls.length : status === "active" ? activeLinks : inactiveLinks;
+                const selected = statusFilter === status;
+                return <button key={status} type="button" onClick={() => setStatusFilter(status)} aria-pressed={selected} className={`inline-flex min-h-8 items-center gap-2 rounded-md border px-3 text-xs font-semibold capitalize transition ${selected ? "border-blue-600 bg-blue-600 text-white" : "border-[var(--border)] shortly-muted hover:border-[var(--border-strong)] hover:bg-[var(--surface-muted)]"}`}>{status}<span className={`text-[10px] ${selected ? "text-blue-100" : "shortly-subtle"}`}>{count}</span></button>;
+              })}
+              {(search || statusFilter !== "all") && <button type="button" onClick={() => { setSearch(""); setStatusFilter("all"); }} className="ml-auto text-xs font-semibold text-blue-600 hover:underline">Clear filters</button>}
+            </div>
+          </div>
 
-            {loading && (
-              <div className="p-14 text-center">
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[var(--border)] border-t-blue-500" />
+          {loading && <div className="p-12 text-center"><div className="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-[var(--border)] border-t-blue-500" /><p className="mt-3 text-sm shortly-muted">Loading your links...</p></div>}
+          {!loading && error && <div className="p-10 text-center"><p className="text-sm font-medium text-red-500">{error}</p><button type="button" onClick={loadUrls} className="shortly-button-secondary mt-4">Try again</button></div>}
+          {!loading && !error && filteredUrls.length === 0 && (
+            <div className="px-5 py-12 text-center sm:py-16">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--brand-soft)] text-[var(--brand)]"><Link2 className="h-5 w-5" /></div>
+              <h3 className="mt-4 text-base font-semibold">{search || statusFilter !== "all" ? "No matching links" : "Your link library is empty"}</h3>
+              <p className="mx-auto mt-2 max-w-sm text-sm leading-6 shortly-muted">{search || statusFilter !== "all" ? "Try another search or change the status filter." : "Create your first short URL and it will appear here, ready to manage and track."}</p>
+              {search || statusFilter !== "all" ? <button type="button" onClick={() => { setSearch(""); setStatusFilter("all"); }} className="mt-4 text-sm font-semibold text-blue-600">Reset filters</button> : <Link href="/dashboard/create" className="shortly-button-primary mt-5"><Plus className="h-4 w-4" /> Create your first link</Link>}
+            </div>
+          )}
 
-                <p className="mt-4 text-sm shortly-muted">
-                  Loading your links...
-                </p>
+          {!loading && !error && filteredUrls.length > 0 && (
+            <>
+              <div className="hidden grid-cols-[minmax(210px,1.25fr)_minmax(180px,1fr)_75px_95px_132px] gap-4 border-b border-[var(--border)] bg-[var(--surface-muted)] px-5 py-3 text-[10px] font-bold uppercase tracking-[0.1em] shortly-subtle lg:grid">
+                <span>Short link</span><span>Destination</span><span>Clicks</span><span>Status</span><span className="text-right">Actions</span>
               </div>
-            )}
-
-            {!loading && error && (
-              <div className="p-12 text-center">
-                <p className="text-sm font-medium text-red-500">{error}</p>
-
-                <button
-                  type="button"
-                  onClick={loadUrls}
-                  className="shortly-button-secondary mt-5"
-                >
-                  Try again
-                </button>
-              </div>
-            )}
-
-            {!loading && !error && filteredUrls.length === 0 && (
-              <div className="p-12 text-center sm:p-16">
-                <div
-                  className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl"
-                  style={{
-                    background: "var(--brand-soft)",
-                    color: "var(--brand)",
-                  }}
-                >
-                  <Link2 className="h-5 w-5" />
-                </div>
-
-                <h3 className="mt-5 text-lg font-semibold">
-                  {search || statusFilter !== "all"
-                    ? "No matching links"
-                    : "Create your first short link"}
-                </h3>
-
-                <p className="mx-auto mt-2 max-w-md text-sm leading-6 shortly-muted">
-                  {search || statusFilter !== "all"
-                    ? "Try changing your search or filters."
-                    : "Your links will appear here with their status, click totals and actions."}
-                </p>
-
-                {!search && statusFilter === "all" && (
-                  <Link
-                    href="/dashboard/create"
-                    className="shortly-button-primary mt-6"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Create link
-                  </Link>
-                )}
-              </div>
-            )}
-
-            {!loading && !error && filteredUrls.length > 0 && (
-              <>
-                <div className="hidden grid-cols-[minmax(260px,1.4fr)_minmax(220px,1fr)_100px_110px_150px] gap-4 border-b border-[var(--border)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.08em] shortly-subtle lg:grid">
-                  <span>Short link</span>
-                  <span>Destination</span>
-                  <span>Clicks</span>
-                  <span>Status</span>
-                  <span className="text-right">Actions</span>
-                </div>
-
-                <div className="divide-y divide-[var(--border)]">
-                  {filteredUrls.map((item) => {
-                    const shortUrl = `${origin}/${item.shortCode}`;
-                    const busy = actionId === item.id;
-
-                    return (
-                      <div
-                        key={item.id}
-                        className="group relative p-5 transition hover:bg-[var(--surface-muted)]"
-                      >
-                        <div className="grid gap-5 lg:grid-cols-[minmax(260px,1.4fr)_minmax(220px,1fr)_100px_110px_150px] lg:items-center lg:gap-4">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <a
-                                href={shortUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={`truncate text-sm font-semibold ${
-                                  item.active
-                                    ? "text-blue-500 hover:text-blue-400"
-                                    : "shortly-muted line-through"
-                                }`}
-                              >
-                                {host}/{item.shortCode}
-                              </a>
-
-                              <ExternalLink className="h-3.5 w-3.5 shrink-0 shortly-subtle opacity-0 transition group-hover:opacity-100" />
-                            </div>
-
-                            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs shortly-subtle">
-                              <span>
-                                Created{" "}
-                                {new Date(item.createdAt).toLocaleDateString()}
-                              </span>
-
-                              {item.expiresAt && (
-                                <span>
-                                  Expires{" "}
-                                  {new Date(
-                                    item.expiresAt,
-                                  ).toLocaleDateString()}
-                                </span>
-                              )}
-                            </div>
+              <div className="divide-y divide-[var(--border)]">
+                {filteredUrls.map((item) => {
+                  const shortUrl = `${origin}/${item.shortCode}`;
+                  const busy = actionId === item.id;
+                  return (
+                    <article key={item.id} className="group px-4 py-4 transition-colors hover:bg-[var(--surface-muted)] sm:px-5">
+                      <div className="grid gap-3 lg:grid-cols-[minmax(210px,1.25fr)_minmax(180px,1fr)_75px_95px_132px] lg:items-center lg:gap-4">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <a href={shortUrl} target="_blank" rel="noopener noreferrer" className={`truncate text-sm font-semibold ${item.active ? "text-blue-600 hover:text-blue-500" : "shortly-muted line-through"}`}>{host}/{item.shortCode}</a>
+                            <ExternalLink className="h-3 w-3 shrink-0 shortly-subtle opacity-0 transition group-hover:opacity-100" />
                           </div>
-
-                          <p
-                            className="min-w-0 truncate text-sm shortly-muted"
-                            title={item.originalUrl}
-                          >
-                            {item.originalUrl}
-                          </p>
-
-                          <div>
-                            <span className="text-sm font-semibold">
-                              {item.clicks.toLocaleString()}
-                            </span>
-
-                            <span className="ml-1 text-xs shortly-subtle lg:hidden">
-                              clicks
-                            </span>
-                          </div>
-
-                          <div>
-                            <span
-                              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
-                                item.active
-                                  ? "bg-emerald-500/10 text-emerald-500"
-                                  : "bg-slate-500/10 shortly-muted"
-                              }`}
-                            >
-                              {item.active ? "Active" : "Inactive"}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2 lg:justify-end">
-                            <button
-                              type="button"
-                              onClick={() => copyLink(item.shortCode)}
-                              disabled={busy}
-                              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] shortly-muted transition hover:bg-[var(--surface)] hover:text-[var(--foreground)] disabled:opacity-40"
-                              aria-label="Copy short link"
-                              title="Copy link"
-                            >
-                              <Copy className="h-4 w-4" />
-                            </button>
-
-                            <Link
-                              href={`/analytics?link=${item.id}`}
-                              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] shortly-muted transition hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
-                              aria-label="View analytics"
-                              title="Analytics"
-                            >
-                              <BarChart3 className="h-4 w-4" />
-                            </Link>
-
-                            <div className="relative">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setMenuId((current) =>
-                                    current === item.id ? null : item.id,
-                                  )
-                                }
-                                disabled={busy}
-                                className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] shortly-muted transition hover:bg-[var(--surface)] hover:text-[var(--foreground)] disabled:opacity-40"
-                                aria-label="More link actions"
-                                aria-expanded={menuId === item.id}
-                              >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </button>
-
-                              {menuId === item.id && (
-                                <div
-                                  className="shortly-rise absolute right-0 top-11 z-30 w-48 rounded-xl border p-1.5 shadow-xl"
-                                  style={{
-                                    borderColor: "var(--border)",
-                                    background: "var(--surface)",
-                                  }}
-                                >
-                                  <MenuButton
-                                    icon={Pencil}
-                                    label="Edit link"
-                                    onClick={() => {
-                                      setEditItem(item);
-                                      setMenuId(null);
-                                    }}
-                                  />
-
-                                  <MenuButton
-                                    icon={Share2}
-                                    label="Share"
-                                    onClick={() => {
-                                      setShareId(item.id);
-                                      setMenuId(null);
-                                    }}
-                                  />
-
-                                  <MenuButton
-                                    icon={Zap}
-                                    label={
-                                      item.active
-                                        ? "Disable link"
-                                        : "Activate link"
-                                    }
-                                    onClick={() => toggleStatus(item.id)}
-                                  />
-
-                                  <div className="my-1 border-t border-[var(--border)]" />
-
-                                  <MenuButton
-                                    icon={Trash2}
-                                    label="Delete link"
-                                    danger
-                                    onClick={() => deleteLink(item.id)}
-                                  />
-                                </div>
-                              )}
-                            </div>
+                          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] shortly-subtle"><span className="inline-flex items-center gap-1"><CalendarDays className="h-3 w-3" />{new Date(item.createdAt).toLocaleDateString()}</span>{item.expiresAt && <span>Expires {new Date(item.expiresAt).toLocaleDateString()}</span>}</div>
+                        </div>
+                        <p className="min-w-0 truncate text-xs shortly-muted" title={item.originalUrl}>{item.originalUrl}</p>
+                        <div className="flex items-baseline gap-1 lg:block"><span className="text-sm font-semibold tabular-nums">{item.clicks.toLocaleString()}</span><span className="text-[10px] shortly-subtle lg:hidden">clicks</span></div>
+                        <div><span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-semibold ${item.active ? "bg-emerald-500/10 text-emerald-600" : "bg-slate-500/10 shortly-muted"}`}><span className={`h-1.5 w-1.5 rounded-full ${item.active ? "bg-emerald-500" : "bg-slate-400"}`} />{item.active ? "Active" : "Inactive"}</span></div>
+                        <div className="flex items-center gap-1.5 lg:justify-end">
+                          <button type="button" onClick={() => copyLink(item.shortCode)} disabled={busy} className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--border)] shortly-muted transition hover:border-blue-500/40 hover:bg-[var(--surface)] hover:text-blue-600 disabled:opacity-40" aria-label="Copy short link" title="Copy link"><Copy className="h-4 w-4" /></button>
+                          <Link href={`/analytics?link=${item.id}`} className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--border)] shortly-muted transition hover:border-blue-500/40 hover:bg-[var(--surface)] hover:text-blue-600" aria-label="View analytics" title="Analytics"><BarChart3 className="h-4 w-4" /></Link>
+                          <div className="relative">
+                            <button type="button" onClick={() => setMenuId((current) => current === item.id ? null : item.id)} disabled={busy} className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--border)] shortly-muted transition hover:bg-[var(--surface)] hover:text-[var(--foreground)] disabled:opacity-40" aria-label="More link actions" aria-expanded={menuId === item.id}><MoreHorizontal className="h-4 w-4" /></button>
+                            {menuId === item.id && <div className="shortly-rise absolute right-0 top-10 z-30 w-48 rounded-lg border p-1.5 shadow-xl" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                              <MenuButton icon={Pencil} label="Edit link" onClick={() => { setEditItem(item); setMenuId(null); }} />
+                              <MenuButton icon={Share2} label="Share" onClick={() => { setShareId(item.id); setMenuId(null); }} />
+                              <MenuButton icon={Zap} label={item.active ? "Disable link" : "Activate link"} onClick={() => toggleStatus(item.id)} />
+                              <div className="my-1 border-t border-[var(--border)]" />
+                              <MenuButton icon={Trash2} label="Delete link" danger onClick={() => deleteLink(item.id)} />
+                            </div>}
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </section>
+                    </article>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          <div className="flex flex-col gap-2 border-t border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-[11px] shortly-subtle sm:flex-row sm:items-center sm:justify-between">
+            <span>Showing {filteredUrls.length} of {urls.length} links</span>
+            <span>Manage destinations, status and sharing from each link's actions.</span>
+          </div>
         </section>
       </main>
-
       <SiteFooter />
     </div>
   );
