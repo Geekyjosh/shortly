@@ -59,34 +59,27 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+    <div data-auth-page className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <SiteHeader />
 
-      <main className="relative overflow-hidden border-b border-[var(--border)]">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/60 to-transparent" />
+      <main className="border-b border-[var(--border)]">
 
-        <div className="shortly-container py-10 sm:py-14 lg:py-20">
-          <div className="grid min-h-[680px] overflow-hidden rounded-[28px] border border-[var(--border)] lg:grid-cols-[1fr_.9fr]">
+        <div className="shortly-container py-8 sm:py-12 lg:py-14">
+          <div className="grid min-h-[620px] overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] lg:grid-cols-[.95fr_1.05fr]">
             <section
               className="relative hidden overflow-hidden p-10 lg:flex lg:flex-col lg:justify-between xl:p-14"
-              style={{
-                background:
-                  "linear-gradient(145deg, #0f172a 0%, #0b1736 52%, #102554 100%)",
-              }}
+              style={{ background: "#0f172a" }}
             >
-              <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-blue-500/15 blur-[100px]" />
-              <div className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-blue-500/10 blur-[110px]" />
-
               <div className="relative">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-300">
+                <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-300">
                   Welcome back
                 </p>
 
-                <h1 className="mt-5 max-w-lg text-5xl font-semibold leading-[1.02] tracking-[-0.045em] text-white">
+                <h1 className="mt-5 max-w-lg text-5xl font-semibold leading-[1.04] tracking-[-0.04em] text-white xl:text-[3.5rem]">
                   Your links are waiting.
                 </h1>
 
-                <p className="mt-6 max-w-md text-base leading-7 text-slate-300">
+                <p className="mt-6 max-w-md text-lg leading-8 text-slate-300">
                   Sign in to manage links, review performance, update
                   destinations and keep everything organized from one place.
                 </p>
@@ -113,31 +106,26 @@ export default function LoginPage() {
               </div>
             </section>
 
-            <section
-              className="flex items-center"
-              style={{
-                background: "var(--surface)",
-              }}
-            >
-              <div className="w-full px-6 py-10 sm:px-10 lg:px-12 xl:px-16">
-                <div className="mx-auto max-w-md">
+            <section className="flex items-center bg-[var(--surface)]">
+              <div className="w-full px-6 py-10 sm:px-10 lg:px-14 xl:px-16">
+                <div className="mx-auto max-w-[440px]">
                   <div className="lg:hidden">
                     <p className="shortly-eyebrow">
                       Welcome back
                     </p>
                   </div>
 
-                  <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] sm:text-4xl">
+                  <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] sm:text-[2.65rem]">
                     Sign in to Shortly
                   </h2>
 
-                  <p className="mt-3 text-sm leading-6 shortly-muted">
+                  <p className="mt-3 text-base leading-7 shortly-muted">
                     Access your dashboard, analytics and saved links.
                   </p>
 
                   <form
                     onSubmit={handleSubmit}
-                    className="mt-8 space-y-5"
+                    className="mt-8 space-y-6"
                   >
                     {error && (
                       <div
@@ -151,7 +139,7 @@ export default function LoginPage() {
                     <div>
                       <label
                         htmlFor="email"
-                        className="mb-2 block text-sm font-medium"
+                        className="mb-2 block text-base font-semibold"
                       >
                         Email address
                       </label>
@@ -165,7 +153,7 @@ export default function LoginPage() {
                         }
                         placeholder="you@example.com"
                         autoComplete="email"
-                        className="shortly-input"
+                        className="shortly-input auth-input"
                         required
                       />
                     </div>
@@ -174,7 +162,7 @@ export default function LoginPage() {
                       <div className="mb-2 flex items-center justify-between gap-4">
                         <label
                           htmlFor="password"
-                          className="text-sm font-medium"
+                          className="text-base font-semibold"
                         >
                           Password
                         </label>
@@ -196,7 +184,7 @@ export default function LoginPage() {
                           }
                           placeholder="Enter your password"
                           autoComplete="current-password"
-                          className="shortly-input pr-12"
+                          className="shortly-input auth-input pr-12"
                           required
                         />
 
@@ -240,7 +228,7 @@ export default function LoginPage() {
                   </form>
 
                   <div className="mt-7 border-t border-[var(--border)] pt-6">
-                    <p className="text-center text-sm shortly-muted">
+                    <p className="text-center text-base shortly-muted">
                       Don&apos;t have an account?{" "}
                       <Link
                         href="/register"
@@ -251,7 +239,7 @@ export default function LoginPage() {
                     </p>
                   </div>
 
-                  <div className="mt-6 flex items-center justify-center gap-2 text-xs shortly-subtle">
+                  <div className="mt-6 flex items-center justify-center gap-2 text-sm shortly-subtle">
                     <ShieldCheck className="h-3.5 w-3.5" />
                     Secure session-based authentication
                   </div>
@@ -277,17 +265,17 @@ function Feature({
   text: string;
 }) {
   return (
-    <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/15 text-blue-300">
+    <div className="flex items-start gap-4 border-t border-white/15 py-4 first:border-t-0">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/10 text-blue-300">
         <Icon className="h-4 w-4" />
       </div>
 
       <div>
-        <p className="text-sm font-semibold text-white">
+        <p className="text-base font-semibold text-white">
           {title}
         </p>
 
-        <p className="mt-1 text-xs leading-5 text-slate-400">
+        <p className="mt-1 text-sm leading-6 text-slate-300">
           {text}
         </p>
       </div>
