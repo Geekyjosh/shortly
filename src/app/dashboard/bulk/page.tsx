@@ -206,7 +206,7 @@ export default function BulkShortenerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+    <div data-workspace-form className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <SiteHeader />
 
       <main>
@@ -277,9 +277,45 @@ export default function BulkShortenerPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="p-5 sm:p-6">
-                <label htmlFor="bulk-urls" className="text-sm font-medium">
-                  URLs
-                </label>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                  <label htmlFor="bulk-urls" className="text-base font-semibold">
+                    Destination URLs
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const pasted = await navigator.clipboard.readText();
+                          if (!pasted.trim()) {
+                            setMessage("Your clipboard is empty.");
+                            return;
+                          }
+                          setInput((current) => [current.trim(), pasted.trim()].filter(Boolean).join("\\n"));
+                          setMessage("URLs pasted from clipboard.");
+                        } catch {
+                          setMessage("Clipboard access was blocked. Paste directly into the field instead.");
+                        }
+                      }}
+                      disabled={loading}
+                      className="shortly-button-secondary min-h-9 px-3 py-2 text-sm"
+                    >
+                      Paste from clipboard
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInput("https://example.com/product\\nhttps://github.com\\nhttps://openai.com");
+                        setMessage("Sample URLs loaded. Replace them with your destinations before shortening.");
+                        setResults([]);
+                      }}
+                      disabled={loading}
+                      className="min-h-9 rounded-lg px-3 py-2 text-sm font-semibold text-blue-600 transition hover:bg-[var(--brand-soft)]"
+                    >
+                      Load sample
+                    </button>
+                  </div>
+                </div>
 
                 <textarea
                   id="bulk-urls"
